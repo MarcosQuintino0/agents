@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://empresa.example/schemas/generated-rules.schema.json",
+  "title": "Generated Rules",
+  "type": "object",
+  "required": ["api", "generatedAt", "rules"],
+  "properties": {
+    "api": { "type": "string" },
+    "generatedAt": { "type": "string" },
+    "rules": { "$ref": "rule-registry.schema.json#/properties/rules" }
+  },
+  "additionalProperties": false
+}

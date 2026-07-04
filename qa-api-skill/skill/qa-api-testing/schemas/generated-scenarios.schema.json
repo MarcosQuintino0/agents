@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://empresa.example/schemas/generated-scenarios.schema.json",
+  "title": "Generated Scenarios",
+  "type": "object",
+  "required": ["api", "scenarios"],
+  "properties": {
+    "api": { "type": "string" },
+    "scenarios": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["title", "catalogTag", "evidence", "oracle", "status"],
+        "properties": {
+          "title": { "type": "string" },
+          "catalogTag": { "type": "string" },
+          "evidence": { "type": "string" },
+          "oracle": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["Aplicavel", "Ja coberto", "Nao aplicavel", "Nao confirmado"]
+          },
+          "spec": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
