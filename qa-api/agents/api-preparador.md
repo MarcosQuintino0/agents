@@ -3,7 +3,7 @@
 Prepara o projeto de automação para receber testes de API no padrão de qualidade definido em `api-pattern.md`.
 
 Este agente **não cria testes de endpoint**. Ele audita e prepara a base comum: dependências,
-estrutura, helpers compartilhados, schemas de erro, perfil do produto e pré-requisitos do Graphify.
+estrutura, helpers compartilhados, schemas de erro, perfil do produto, script `qa:reindex` e pré-requisitos do Graphify.
 
 ---
 
@@ -41,7 +41,6 @@ Antes de criar ou mexer em qualquer arquivo:
 | Arquivo                                               | Ação se não existir                                            | Ação se existir fora do padrão                      |
 | ----------------------------------------------------- | -------------------------------------------------------------- | --------------------------------------------------- |
 | `package.json`                                        | Avisar que o projeto pode não ser Node/Cypress.                | Não reescrever; só reportar scripts/deps faltantes. |
-| `.qa-api/project-profile.yml`                         | Pode propor criação, mas não inventar `backend.root`.          | Reportar lacunas; alterar só com OK.                |
 | `graphify-out/graph.json`                             | Pedir `npm run qa:reindex`.                                    | Pedir `npm run qa:reindex` se parecer desatualizado. |
 | `.qa-api/backend-graph.lock.json`                     | Pedir `npm run qa:reindex`.                                    | Validar frescor quando possível.                    |
 | `.prettierrc.json`                                    | Pode propor criação.                                           | Não sobrescrever; reportar diferença.               |
@@ -236,8 +235,9 @@ arquivo no prompt.
 
 Procure no projeto atual:
 
-- `.qa-api/project-profile.yml`;
 - script `qa:reindex` em `package.json`;
+- script `qa:reindex:check` em `package.json`;
+- `qa-api/tools/qa-reindex.mjs` na instalação da skill;
 - `graphify-out/graph.json`;
 - `graphify-out/GRAPH_REPORT.md`, quando existir;
 - `.qa-api/backend-graph.lock.json`;
@@ -265,11 +265,25 @@ quando essa massa não existir.
 
 Após descobrir o perfil do produto, se o backend estiver disponível, confirme que o projeto possui
 Graphify configurado e que existe o comando determinístico `npm run qa:reindex`. O reindex deve
-gerar `graphify-out/graph.json` e `.qa-api/backend-graph.lock.json`. A criação de testes oficiais
-depende desse grafo.
+chamar `qa-api/tools/qa-reindex.mjs` com `--backend <caminho-do-backend>` e gerar
+`graphify-out/graph.json` e `.qa-api/backend-graph.lock.json`. A criação de testes oficiais depende
+desse grafo.
 
-O preparador pode propor `.qa-api/project-profile.yml`, mas deve pedir autorização antes de alterar
-`package.json` ou instalar dependências. Não crie `mapeamento-api.md` nem `mapeamento-api.json`.
+Se o script `qa:reindex` não existir, proponha adicionar ao `package.json` do projeto consumidor:
+
+```json
+{
+  "scripts": {
+    "qa:reindex": "node .agents/skills/qa-api/tools/qa-reindex.mjs --backend ../backend",
+    "qa:reindex:check": "node .agents/skills/qa-api/tools/qa-reindex.mjs --check"
+  }
+}
+```
+
+Peça autorização antes de alterar `package.json`. Se não souber o caminho do backend, não invente:
+diga que o usuário precisa substituir `../backend` pelo caminho relativo correto.
+
+Não crie `mapeamento-api.md` nem `mapeamento-api.json`.
 
 ---
 
@@ -288,8 +302,9 @@ Entregue uma tabela:
 | Asserts base    | OK/faltando/fora do padrão | criar/ajustar           |
 | Segurança       | OK/lacuna                  | status sem token/token inválido e usuário sem permissão |
 | Ferramentas de relatório | OK/faltando/fora do padrão | se faltarem, pedir ao usuário inserir (passo manual); verificar wiring e scripts |
-| `.qa-api/project-profile.yml` | OK/faltando/lacuna | propor configuração sem inventar `backend.root` |
 | `qa:reindex` | OK/faltando | pedir autorização antes de alterar `package.json` |
+| `qa:reindex:check` | OK/faltando | pedir autorização antes de alterar `package.json` |
+| `qa-api/tools/qa-reindex.mjs` | OK/faltando | orientar instalação/cópia correta da skill |
 | Graphify | OK/não encontrado/documentado | não instalar; registrar instrução de instalação |
 | `graphify-out/graph.json` | OK/faltando/desatualizado | pedir `npm run qa:reindex` |
 | `.qa-api/backend-graph.lock.json` | OK/faltando/desatualizado | pedir `npm run qa:reindex` |

@@ -2,19 +2,42 @@
 
 Graphify é obrigatório no fluxo oficial.
 
-## Comando principal
+## Configuração mínima no projeto consumidor
+
+No `package.json`:
+
+```json
+{
+  "scripts": {
+    "qa:reindex": "node .agents/skills/qa-api/tools/qa-reindex.mjs --backend ../backend",
+    "qa:reindex:check": "node .agents/skills/qa-api/tools/qa-reindex.mjs --check"
+  }
+}
+```
+
+O usuário deve trocar `../backend` pelo caminho relativo correto do backend.
+
+## Rodar reindex
 
 ```bash
 npm run qa:reindex
 ```
 
-Esse comando deve rodar no terminal comum, sem IA.
-
-Ele deve gerar:
+Isso gera:
 
 - `graphify-out/graph.json`
-- `graphify-out/GRAPH_REPORT.md`, quando disponível
+- `graphify-out/GRAPH_REPORT.md`, quando existir
 - `.qa-api/backend-graph.lock.json`
+
+O lock registra o backend usado no reindex em `backendRoot` e `backendRootAbsolute`.
+
+## Rodar check
+
+```bash
+npm run qa:reindex:check
+```
+
+Isso valida se o grafo e o lock existem e se o commit do backend ainda bate, quando possível. O check não roda Graphify e não modifica arquivos.
 
 ## Instalação
 
@@ -78,9 +101,21 @@ E rode:
 npm run qa:reindex
 ```
 
-## Quando rodar
+## Graphify CLI vs Graphify Skill
 
-Rode na primeira vez do projeto e quando o backend mudar significativamente.
+Graphify CLI é obrigatório.
+
+Graphify Skill é opcional.
+
+Se Graphify for instalado como skill, deve ficar ao lado da `qa-api`:
+
+```text
+.agents/skills/
+├── qa-api/
+└── graphify/
+```
+
+Não copie Graphify para dentro de `qa-api`.
 
 ## Quando a skill deve parar
 
@@ -88,6 +123,7 @@ A skill deve parar e pedir `npm run qa:reindex` quando:
 
 - `graphify-out/graph.json` não existir;
 - `.qa-api/backend-graph.lock.json` não existir;
+- o lock não tiver `backendRoot` nem `backendRootAbsolute`;
 - a API solicitada não for encontrada;
 - o grafo parecer desatualizado.
 

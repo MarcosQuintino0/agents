@@ -20,11 +20,13 @@ se exigir autorização). Use junto com `api-pattern.md` (as regras) e `api-temp
 
 ## Validação de contexto Graphify
 
-Quando a revisão depender do backend, verifique se `graphify-out/graph.json` existe. Use o grafo
-apenas como apoio para localizar arquivos. O contrato real continua sendo o código do backend.
+Quando a revisão depender do backend, verifique se `graphify-out/graph.json` e
+`.qa-api/backend-graph.lock.json` existem. Use o lock para localizar o backend e use o grafo apenas
+como apoio para localizar arquivos. O contrato real continua sendo o código do backend.
 
-Se o grafo estiver ausente, avise que a revisão pode ficar incompleta e sugira `npm run qa:reindex`.
-Não use Graphify como contrato final e não enfraqueça nenhuma regra do revisor por falta de grafo.
+Se o grafo ou lock estiver ausente, avise que a revisão contra backend pode ficar incompleta e sugira
+`npm run qa:reindex`. Não use Graphify como contrato final e não enfraqueça nenhuma regra do revisor
+por falta de grafo.
 
 ---
 

@@ -51,14 +51,16 @@ Use as fontes abaixo conforme a necessidade:
 4. Configuracoes e padroes do projeto: contrato alvo, seguranca e nao-vazamento.
 5. Codigo-fonte do backend informado pelo usuario: contrato, regras e causa provavel.
 6. `graphify-out/graph.json`: apoio de navegacao quando precisar investigar backend.
-7. `graphify-out/GRAPH_REPORT.md`, quando existir.
-8. `cypress/logs/report.html`: apoio visual ou fallback; nao e obrigatorio quando o JSON basta.
+7. `.qa-api/backend-graph.lock.json`: backend root usado no reindex.
+8. `graphify-out/GRAPH_REPORT.md`, quando existir.
+9. `cypress/logs/report.html`: apoio visual ou fallback; nao e obrigatorio quando o JSON basta.
 
 O titulo do teste descreve sua intencao e pode orientar a analise inicial. Nao o trate isoladamente
 como contrato definitivo quando houver comportamento ambiguo.
 
-Quando precisar investigar backend, use o grafo do Graphify apenas para localizar arquivos
-candidatos. Confirme contrato, regra, causa provavel e formato de erro no codigo real.
+Quando precisar investigar backend, use o lock para localizar o backend e o grafo do Graphify apenas
+para localizar arquivos candidatos. Confirme contrato, regra, causa provavel e formato de erro no
+codigo real.
 
 ---
 
@@ -132,9 +134,10 @@ Analise o backend quando ele estiver disponivel e houver:
 - necessidade de confirmar o resultado esperado;
 - necessidade de explicar a causa provavel para um chamado.
 
-Se `graphify-out/graph.json` existir, use-o para localizar controller, DTO/request, response,
-service, validacoes, tratamento de exceptions e regras relacionadas ao endpoint. Se o grafo nao
-existir, informe que a investigacao pode ficar incompleta e sugira `npm run qa:reindex`.
+Se `graphify-out/graph.json` e `.qa-api/backend-graph.lock.json` existirem, use-os para localizar
+controller, DTO/request, response, service, validacoes, tratamento de exceptions e regras
+relacionadas ao endpoint. Se o grafo ou lock nao existir, informe que a investigacao pode ficar
+incompleta e sugira `npm run qa:reindex` ou peça o caminho do backend.
 
 Nao invente causa raiz quando o codigo nao sustentar a conclusao.
 

@@ -1,29 +1,47 @@
 # Tools da Skill QA API
 
-Neste MVP, a skill não inclui um conversor `graphify-to-api-map`.
-
-O fluxo oficial usa diretamente os arquivos gerados pelo Graphify:
-
-- `graphify-out/graph.json`
-- `graphify-out/GRAPH_REPORT.md`
-
-O único comando determinístico obrigatório no projeto consumidor é:
-
-```bash
-npm run qa:reindex
-```
-
-Esse comando deve ser fornecido pelo projeto consumidor ou por um pacote futuro, como:
+Esta pasta contém o script determinístico de reindex:
 
 ```text
-@empresa/api-test-creator
+qa-api/tools/qa-reindex.mjs
 ```
 
-A função do comando é:
+Ele não usa `.yml` e não depende de pacotes npm externos.
 
-- rodar Graphify no backend;
-- garantir que `graphify-out/graph.json` existe;
-- gerar ou atualizar `.qa-api/backend-graph.lock.json`.
+## Uso direto
 
-Não crie `mapeamento-api.md` neste MVP.
-Não crie `mapeamento-api.json` neste MVP.
+```bash
+node .agents/skills/qa-api/tools/qa-reindex.mjs --backend ../backend
+node .agents/skills/qa-api/tools/qa-reindex.mjs --check
+node .agents/skills/qa-api/tools/qa-reindex.mjs --help
+```
+
+## Package.json recomendado
+
+```json
+{
+  "scripts": {
+    "qa:reindex": "node .agents/skills/qa-api/tools/qa-reindex.mjs --backend ../backend",
+    "qa:reindex:check": "node .agents/skills/qa-api/tools/qa-reindex.mjs --check"
+  }
+}
+```
+
+Troque `../backend` pelo caminho relativo correto do backend.
+
+## Saídas geradas
+
+O reindex deve gerar no projeto consumidor:
+
+- `graphify-out/graph.json`
+- `graphify-out/GRAPH_REPORT.md`, quando existir
+- `.qa-api/backend-graph.lock.json`
+
+O lock é criado automaticamente e registra o backend usado no reindex.
+
+## Regras
+
+- Não crie `mapeamento-api.md` neste MVP.
+- Não crie `mapeamento-api.json` neste MVP.
+- Não instale Graphify automaticamente.
+- Não copie Graphify para dentro de `qa-api`.

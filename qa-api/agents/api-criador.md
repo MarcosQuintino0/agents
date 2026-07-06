@@ -46,13 +46,14 @@ Ao concluir toda a descoberta, siga diretamente para a Fase 2 na mesma resposta.
 
 Antes de criar ou refatorar testes:
 
-1. Leia `.qa-api/project-profile.yml`.
-2. Verifique `graphify-out/graph.json`.
-3. Verifique `.qa-api/backend-graph.lock.json`.
+1. Verifique `graphify-out/graph.json`.
+2. Verifique `.qa-api/backend-graph.lock.json`.
+3. Leia o lock para descobrir o backend root.
 4. Se `graphify-out/GRAPH_REPORT.md` existir, use como orientacao adicional.
-5. Se o grafo nao existir ou parecer desatualizado, pare e peca `npm run qa:reindex`.
-6. Use o grafo apenas para localizar arquivos e relacoes.
-7. Leia o codigo real antes de definir qualquer contrato.
+5. Se o grafo ou lock nao existir, pare e peca `npm run qa:reindex`.
+6. Se o lock nao tiver `backendRoot` nem `backendRootAbsolute`, trate como lock invalido e peca `npm run qa:reindex`.
+7. Use o grafo apenas para localizar arquivos e relacoes.
+8. Leia o codigo real antes de definir qualquer contrato.
 
 O fluxo oficial exige Graphify. Nao faca descoberta manual como substituto quando o grafo estiver
 ausente ou desatualizado.
@@ -79,12 +80,13 @@ Se a base compartilhada estiver ausente, incompleta ou presa a outro produto:
 ### 1.2 Identificar o contrato real da API
 
 Antes de caçar endpoints no backend, verifique se existe `graphify-out/graph.json` e
-`.qa-api/backend-graph.lock.json`. O fluxo oficial exige Graphify. Se o grafo estiver ausente ou
-desatualizado, pare e peça ao usuário para rodar `npm run qa:reindex`. Não faça descoberta manual
+`.qa-api/backend-graph.lock.json`. O fluxo oficial exige Graphify. Se o grafo ou lock estiver ausente
+ou desatualizado, pare e peça ao usuário para rodar `npm run qa:reindex`. Não faça descoberta manual
 como substituto no fluxo oficial.
 
 Se o grafo existir:
 
+- leia o lock para localizar o backend real por `backendRoot` ou `backendRootAbsolute`;
 - localize a API solicitada no `graphify-out/graph.json`;
 - consulte `graphify-out/GRAPH_REPORT.md` quando existir;
 - use os ponteiros do grafo para chegar a controller/router, DTOs, services, repositories, handlers,

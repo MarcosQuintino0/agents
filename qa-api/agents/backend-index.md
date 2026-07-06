@@ -12,63 +12,51 @@ O fluxo oficial usa diretamente:
 
 - `graphify-out/graph.json`
 - `graphify-out/GRAPH_REPORT.md`, quando existir
-- `.qa-api/backend-graph.lock.json`, quando existir
+- `.qa-api/backend-graph.lock.json`
 
 Não crie `mapeamento-api.md`.
 Não crie `mapeamento-api.json`.
 
-## Pré-requisito de configuração
+## Como o backend é configurado
 
-Antes de usar o grafo, leia `.qa-api/project-profile.yml` no projeto consumidor.
+Não existe arquivo `.yml` obrigatório.
 
-Se esse arquivo não existir:
+O caminho do backend é informado no script `qa:reindex` do `package.json` do projeto consumidor:
 
-1. pare o fluxo;
-2. explique que o projeto consumidor precisa ser configurado;
-3. peça ao usuário para informar ou criar o perfil do projeto;
-4. não invente `backend.root`.
-
-Perfil esperado para documentação:
-
-```yaml
-project:
-  name: nome-do-projeto
-
-backend:
-  root: caminho/relativo/do/backend
-  graphOutputDir: graphify-out
-
-tests:
-  apiRoot: cypress/e2e/apis
-
-commands:
-  reindex: npm run qa:reindex
-  lint: npm run lint
-  coverage: node tools/relatorio-cobertura cypress/e2e/apis/{api}
-  run: npm run cy:log -- --spec "cypress/e2e/apis/{api}/**/*.cy.js"
-
-graphify:
-  required: true
-  graphJson: graphify-out/graph.json
-  graphReport: graphify-out/GRAPH_REPORT.md
-  lockFile: .qa-api/backend-graph.lock.json
+```json
+{
+  "scripts": {
+    "qa:reindex": "node .agents/skills/qa-api/tools/qa-reindex.mjs --backend ../backend",
+    "qa:reindex:check": "node .agents/skills/qa-api/tools/qa-reindex.mjs --check"
+  }
+}
 ```
+
+O usuário deve trocar `../backend` pelo caminho relativo correto do backend. Não invente esse caminho.
+
+O script gera automaticamente:
+
+- `graphify-out/graph.json`
+- `graphify-out/GRAPH_REPORT.md`, quando existir
+- `.qa-api/backend-graph.lock.json`
+
+A skill usa o lock para descobrir o backend root que foi usado no reindex. O lock deve conter `backendRoot` ou `backendRootAbsolute`; se nenhum existir, trate o lock como inválido e peça `npm run qa:reindex`.
 
 ## Validação obrigatória
 
 Antes de criar ou refatorar testes de API:
 
-1. leia `.qa-api/project-profile.yml`;
-2. verifique se `graphify-out/graph.json` existe;
-3. verifique se `.qa-api/backend-graph.lock.json` existe;
+1. verifique se `graphify-out/graph.json` existe;
+2. verifique se `.qa-api/backend-graph.lock.json` existe;
+3. leia o lock para descobrir o backend root;
 4. consulte `graphify-out/GRAPH_REPORT.md`, se existir;
-5. quando o lock tiver dados suficientes, valide se o grafo parece atualizado;
-6. se o grafo estiver ausente ou desatualizado, pare e peça `npm run qa:reindex`.
+5. quando possível, valide se o grafo parece atualizado;
+6. se o grafo ou lock estiver ausente/desatualizado, pare e peça `npm run qa:reindex`.
 
 Mensagem de parada:
 
 ```text
-Não posso criar os testes ainda porque o grafo do backend não foi gerado ou está desatualizado.
+Não posso criar os testes ainda porque o grafo do backend não foi gerado.
 
 Rode no terminal:
 
@@ -115,20 +103,45 @@ Se o grafo apontar para arquivo inexistente, candidato ambíguo ou relação sus
 
 ## Comando de reindex
 
-O comando determinístico esperado no projeto consumidor é:
+O comando determinístico da skill é:
 
 ```bash
-npm run qa:reindex
+node .agents/skills/qa-api/tools/qa-reindex.mjs --backend ../backend
 ```
 
-Esse comando deve:
+Package.json recomendado:
 
-- rodar Graphify no backend configurado em `.qa-api/project-profile.yml`;
-- gerar ou atualizar `graphify-out/graph.json`;
-- gerar `graphify-out/GRAPH_REPORT.md`, quando disponível;
+```json
+{
+  "scripts": {
+    "qa:reindex": "node .agents/skills/qa-api/tools/qa-reindex.mjs --backend ../backend",
+    "qa:reindex:check": "node .agents/skills/qa-api/tools/qa-reindex.mjs --check"
+  }
+}
+```
+
+O comando deve:
+
+- rodar Graphify no backend informado por `--backend`;
+- copiar o grafo para `graphify-out/graph.json` no projeto consumidor;
+- copiar `graphify-out/GRAPH_REPORT.md`, quando existir;
 - gerar ou atualizar `.qa-api/backend-graph.lock.json`.
 
 A skill não instala Graphify automaticamente e não altera `package.json` sem autorização explícita.
+
+## Graphify CLI e Graphify Skill
+
+Graphify CLI é obrigatório.
+
+Graphify Skill é opcional. Se Graphify for instalado como skill de projeto, deve ficar ao lado da `qa-api`:
+
+```text
+.agents/skills/
+├── qa-api/
+└── graphify/
+```
+
+Não copie Graphify para dentro de `qa-api`.
 
 ## Quando orientar instalação
 

@@ -36,9 +36,7 @@ Antes de criar ou refatorar testes de API, verifique se existem no projeto consu
 
 Use também `graphify-out/GRAPH_REPORT.md` quando existir.
 
-Se `.qa-api/project-profile.yml` não existir, pare e oriente o usuário a configurar o projeto consumidor. Não invente `backend.root`.
-
-Se o grafo não existir, pare e responda:
+Se o grafo ou lock não existir, pare e responda:
 
 ```text
 Não posso criar os testes ainda porque o grafo do backend não foi gerado.
@@ -52,9 +50,39 @@ Depois me peça novamente:
 Crie testes para a API <nome-da-api>.
 ```
 
+Se o lock existir, use o campo `backendRoot` ou `backendRootAbsolute` para localizar o código real do backend. Se o lock não tiver nenhum desses campos, trate como lock inválido e peça `npm run qa:reindex`.
+
 Se o lock indicar que o grafo está desatualizado, pare e peça `npm run qa:reindex`.
 
+Se o projeto consumidor ainda não tiver o script `qa:reindex`, responda:
+
+```text
+O projeto consumidor ainda não possui o script `qa:reindex`.
+
+Configure no package.json:
+
+"qa:reindex": "node .agents/skills/qa-api/tools/qa-reindex.mjs --backend ../backend"
+
+Depois rode:
+
+npm run qa:reindex
+```
+
+O usuário deve trocar `../backend` pelo caminho relativo correto do backend. Não invente esse caminho.
+
 Se o grafo existir, use-o como mapa estrutural do backend. Graphify é um GPS, não o contrato final.
+
+A skill `qa-api` não contém Graphify internamente. Graphify é uma dependência externa obrigatória no fluxo oficial.
+
+Quando instalado como skill de projeto, Graphify deve ficar ao lado da `qa-api`:
+
+```text
+.agents/skills/
+├── qa-api/
+└── graphify/
+```
+
+Não copie Graphify para dentro de `qa-api`.
 
 Sempre leia o código real do backend antes de definir:
 
@@ -99,7 +127,7 @@ Sempre leia o código real do backend antes de definir:
 Quando o usuário pedir para preparar o projeto:
 
 - use `agents/api-preparador.md`;
-- confira `.qa-api/project-profile.yml`, script `qa:reindex`, disponibilidade de Graphify e artefatos do grafo;
+- confira scripts `qa:reindex` e `qa:reindex:check`, disponibilidade de Graphify e artefatos do grafo;
 - peça autorização antes de alterar `package.json` ou instalar dependências.
 
 Quando o usuário pedir para criar ou refatorar testes:

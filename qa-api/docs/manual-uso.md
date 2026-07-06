@@ -1,24 +1,49 @@
 # Manual de Uso: Skill QA API
 
-Esta skill organiza os antigos agentes de testes de API Cypress em um fluxo único, reutilizável e dependente de Graphify.
+Esta skill organiza agentes de testes de API Cypress em um fluxo único, reutilizável e dependente de Graphify.
 
 ## Fluxo oficial
 
 No projeto consumidor:
 
-1. configure `.qa-api/project-profile.yml` com o caminho relativo do backend;
-2. garanta que Graphify esteja instalado;
-3. rode:
+1. copie/instale a skill em:
+
+```text
+.agents/skills/qa-api/
+```
+
+2. garanta que Graphify CLI esteja instalado:
+
+```bash
+graphify --version
+```
+
+3. configure no `package.json`:
+
+```json
+{
+  "scripts": {
+    "qa:reindex": "node .agents/skills/qa-api/tools/qa-reindex.mjs --backend ../backend",
+    "qa:reindex:check": "node .agents/skills/qa-api/tools/qa-reindex.mjs --check"
+  }
+}
+```
+
+4. troque `../backend` pelo caminho relativo correto do backend;
+
+5. rode:
 
 ```bash
 npm run qa:reindex
 ```
 
-4. peça para a IA:
+6. peça para a IA:
 
 ```text
 Crie testes para a API <nome-da-api>.
 ```
+
+O usuário não cria `.yml`. O `qa:reindex` cria automaticamente `.qa-api/backend-graph.lock.json`.
 
 ## O que o reindex deve gerar
 
@@ -48,20 +73,13 @@ Analise o report da API empresa.
 | `agents/api-revisor.md` | Revisar uma suíte existente e identificar lacunas. |
 | `agents/api-analisador.md` | Analisar `report.json` e preparar rascunhos de chamados quando solicitados. |
 
-## Padrões e templates
-
-| Pasta | Conteúdo |
-| --- | --- |
-| `pattern/` | Regras de qualidade, oráculo, validação por camadas, convenções, JSDoc, exemplos, organização e portabilidade. |
-| `templates/` | Templates técnicos, perfil de produto e template de chamado. |
-| `docs/` | Manual, Graphify e prompts curtos. |
-| `tools/` | Notas sobre ferramentas futuras e comando determinístico. |
-
 ## Regra do Graphify
 
 Graphify é obrigatório no fluxo oficial.
 
 Use `graphify-out/graph.json` como mapa estrutural para localizar controller, router, DTO, service, repository, handler, validações, exceptions e middlewares.
+
+Use `.qa-api/backend-graph.lock.json` para descobrir o backend root usado no reindex.
 
 Graphify não é contrato final. Depois de encontrar os arquivos candidatos, sempre abra o código real do backend antes de definir payload, campos, obrigatoriedade, tipos, nulabilidade, status, mensagens, regras de negócio, persistência, segurança e formato de erro.
 
@@ -94,6 +112,20 @@ pip install graphifyy
 ```
 
 O pacote Python é `graphifyy`, mas o comando exposto no terminal é `graphify`.
+
+## Graphify Skill
+
+Graphify CLI é obrigatório. Graphify Skill é opcional.
+
+Se Graphify for instalado como skill de projeto, deve ficar ao lado da `qa-api`:
+
+```text
+.agents/skills/
+├── qa-api/
+└── graphify/
+```
+
+Não copie Graphify para dentro de `qa-api`.
 
 ## Regras de segurança
 
