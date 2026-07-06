@@ -63,7 +63,8 @@ Crie testes para a API <nome-da-api>.
 - cria schemas de sucesso quando aplicável;
 - aplica o catálogo de testes;
 - valida status, schema, regra, persistência, não-vazamento e acesso;
-- revisa a própria saída.
+- revisa a própria saída;
+- analisa reports e entrega problemas numerados para a skill `qa-chamado`.
 
 ## O que a skill não faz automaticamente
 
@@ -73,7 +74,8 @@ Crie testes para a API <nome-da-api>.
 - não altera schemas compartilhados sem autorização;
 - não cria testes oficiais sem Graphify;
 - não usa Graphify como contrato final;
-- não mascara defeito para fazer teste passar.
+- não mascara defeito para fazer teste passar;
+- não cria rascunhos de chamados, use `qa-chamado` para isso.
 
 ## Lock do backend
 

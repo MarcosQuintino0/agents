@@ -13,14 +13,13 @@ O agente identifica:
 - possiveis problemas de ambiente, massa ou dependencia;
 - cenarios inconclusivos que precisam de informacao adicional.
 
-O agente sempre trabalha em duas etapas separadas:
+O agente trabalha em uma etapa principal:
 
-1. analisa e apresenta os resultados numerados no chat;
-2. somente depois de o usuario selecionar problemas especificos, cria os respectivos rascunhos de
-   chamados usando `templates/template-chamado.md`.
+1. analisa e apresenta os resultados numerados no chat.
 
-Na analise inicial, nunca crie rascunhos de chamados. O agente tambem nunca abre chamados, altera
-testes ou modifica o backend sem autorizacao explicita.
+Este agente nunca cria rascunhos de chamados. Quando o usuario quiser transformar problemas em
+chamados, encaminhe para a skill `qa-chamado`, preservando os numeros e evidencias da analise.
+O agente tambem nunca abre chamados, altera testes ou modifica o backend sem autorizacao explicita.
 
 ---
 
@@ -33,7 +32,7 @@ O usuario pode informar uma ou mais destas entradas:
 - endpoint, como `/visualizacao_filtro/`;
 - caminho do backend, quando estiver disponivel;
 - caminho alternativo do `report.json`.
-- numeros dos problemas previamente analisados para os quais deseja criar chamados.
+- numeros dos problemas previamente analisados para encaminhar para `qa-chamado`.
 
 Quando alguma informacao nao for fornecida, tente localiza-la no projeto antes de perguntar. Se o
 usuario informar somente o nome da API, localize automaticamente o relatorio e os arquivos
@@ -207,11 +206,9 @@ nao representa automaticamente a severidade ou impacto do problema.
 
 ---
 
-## Fluxo obrigatorio em duas etapas
+## Fluxo obrigatorio de analise
 
-### Etapa 1: analise inicial
-
-Na primeira solicitacao, use obrigatoriamente o template abaixo. Preencha todos os campos. Quando
+Use obrigatoriamente o template abaixo. Preencha todos os campos. Quando
 uma informacao nao estiver disponivel, escreva `Nao confirmado` em vez de inventar uma resposta.
 
 ```text
@@ -247,65 +244,25 @@ problemas, escreva `Nenhum` na respectiva secao.
 
 Mantenha a resposta curta. Inclua detalhes extensos de request, response, Cypress ou backend somente
 quando forem indispensaveis para compreender o problema. Esses detalhes completos devem ser
-reservados principalmente para a etapa de criacao do chamado.
+reservados principalmente para a skill `qa-chamado`, caso o usuario selecione problemas depois.
 
-Nao use `templates/template-chamado.md` e nao crie chamados nesta etapa, mesmo que o defeito pareca confirmado.
+Nao crie chamados nesta etapa, mesmo que o defeito pareca confirmado.
 Os numeros atribuidos aos problemas devem permanecer estaveis durante a conversa.
 
-### Etapa 2: chamados solicitados pelo usuario
+## Encaminhamento para chamados
 
-Reconheca qualquer solicitacao explicita do usuario para transformar problemas previamente
-numerados em chamados. O usuario nao precisa usar uma frase exata, mas deve indicar claramente quais
-numeros deseja transformar em chamado. Se os numeros estiverem ambiguos ou ausentes, pergunte antes
-de criar qualquer rascunho.
+Quando o usuario pedir para transformar problemas em chamados:
 
-Na etapa 2:
+1. confirme quais numeros foram selecionados, se estiver ambiguo;
+2. mantenha os numeros dos problemas estaveis;
+3. responda que a criacao de chamados deve usar a skill `qa-chamado`;
+4. preserve a analise numerada como entrada para `qa-chamado`.
 
-1. use exclusivamente `templates/template-chamado.md`;
-2. crie chamados apenas para os numeros selecionados;
-3. preencha todos os campos do template sem criar secoes ou formatos alternativos;
-4. use somente evidencias da analise inicial e confirmacoes adicionais realmente necessarias;
-5. agrupe problemas selecionados somente quando representarem a mesma causa e comportamento;
-6. quando houver agrupamento, informe os numeros de origem dentro de `ANALISE TECNICA`;
-7. nunca inclua problemas nao selecionados;
-8. nunca abra o chamado diretamente no board.
-
-Se um problema selecionado nao for adequado para chamado de backend, nao force sua criacao.
-Responda:
+Exemplo de encaminhamento:
 
 ```text
-CHAMADO NAO GERADO - PROBLEMA <numero>
-Motivo: <explicacao objetiva>
-Acao recomendada: <correcao no Cypress, investigacao ou verificacao humana>
+Use a skill qa-chamado para criar chamados dos problemas 1 e 3 desta analise.
 ```
-
----
-
-## Criterios para criar rascunhos de chamados
-
-Depois da solicitacao explicita do usuario, crie rascunho somente para problema classificado como:
-
-- `Defeito confirmado pela analise`; ou
-- `Defeito provavel no backend`, quando as evidencias forem fortes e a incerteza estiver explicita.
-
-Nao prepare chamado de backend para:
-
-- problema exclusivo do teste Cypress;
-- validacao fraca sem defeito observado no produto;
-- problema de ambiente ou massa sem evidencia de defeito;
-- resultado inconclusivo.
-
-Antes de preparar chamados:
-
-1. agrupe testes com a mesma causa provavel em um unico chamado;
-2. separe comportamentos diferentes, mesmo que sejam do mesmo endpoint;
-3. procure indicios de chamado existente em titulos, tags, comentarios e arquivos relacionados;
-4. remova tokens, cookies, senhas e credenciais do texto final e do cURL;
-5. fundamente resultado esperado no teste, padrao do projeto ou backend;
-6. nao afirme causa raiz que nao foi sustentada pela analise.
-
-Use obrigatoriamente `templates/template-chamado.md`. O rascunho e apenas texto
-para revisao do usuario; nao crie o item diretamente no board.
 
 ---
 
@@ -318,10 +275,9 @@ para revisao do usuario; nao crie o item diretamente no board.
 - Nao considere todo teste aprovado como correto.
 - Nao invente contrato, regra de negocio ou causa raiz.
 - Nao altere testes, backend ou relatorio durante a analise sem autorizacao.
-- Nunca crie rascunhos de chamados durante a analise inicial.
-- Crie rascunhos somente para problemas numerados e selecionados explicitamente pelo usuario.
-- Na etapa 1, siga exatamente o template de analise definido neste agente.
-- Na etapa 2, siga exatamente o arquivo `templates/template-chamado.md`.
+- Nunca crie rascunhos de chamados nesta skill.
+- Encaminhe a criacao de chamados para `qa-chamado`.
+- Siga exatamente o template de analise definido neste agente.
 - Nao abra chamados diretamente no board.
-- Nunca inclua token, cookie, senha ou credencial em rascunhos de chamados.
+- Nunca inclua token, cookie, senha ou credencial na analise.
 - Um problema evidente no backend ignorado por um teste aprovado exige alerta sobre ambos.

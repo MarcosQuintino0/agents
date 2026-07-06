@@ -71,7 +71,7 @@ Analise o report da API empresa.
 | `agents/backend-index.md` | Validar o uso obrigatório de Graphify e orientar o reindex. |
 | `agents/api-criador.md` | Criar ou refatorar a suíte completa de uma API. |
 | `agents/api-revisor.md` | Revisar uma suíte existente e identificar lacunas. |
-| `agents/api-analisador.md` | Analisar `report.json` e preparar rascunhos de chamados quando solicitados. |
+| `agents/api-analisador.md` | Analisar `report.json` e entregar problemas numerados para possível uso pela skill `qa-chamado`. |
 
 ## Regra do Graphify
 

@@ -118,7 +118,6 @@ Sempre leia o código real do backend antes de definir:
 - `pattern/07-portabilidade.md`: adaptação para novos produtos.
 - `templates/api-templates.md`: exemplos técnicos.
 - `templates/api-perfil.template.md`: checklist de perfil do produto.
-- `templates/template-chamado.md`: template de chamado para problemas confirmados/prováveis.
 - `docs/graphify.md`: como rodar e validar Graphify.
 - `docs/prompts.md`: prompts curtos recomendados para o usuário.
 
@@ -146,7 +145,13 @@ Quando o usuário pedir para revisar testes:
 Quando o usuário pedir para analisar falhas, report ou execução:
 
 - use `agents/api-analisador.md`;
-- crie chamados somente se o usuário selecionar problemas numerados.
+- entregue problemas numerados e indique quais têm evidência suficiente para possível chamado;
+- se o usuário pedir para criar chamados, use a skill `qa-chamado`.
+
+Quando o usuário pedir para transformar problemas em chamados:
+
+- use `qa-chamado`;
+- não gere rascunhos de chamado por esta skill.
 
 Quando o usuário perguntar como rodar o mapeamento:
 

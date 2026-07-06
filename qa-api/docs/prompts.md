@@ -24,6 +24,14 @@ Revise os testes da API <nome-da-api>.
 Analise o report da API <nome-da-api>.
 ```
 
+## Criar chamados após análise
+
+Use a skill `qa-chamado`:
+
+```text
+Crie chamados para os problemas 1 e 3.
+```
+
 ## Preparar projeto
 
 ```text
