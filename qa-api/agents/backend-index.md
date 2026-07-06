@@ -133,11 +133,12 @@ A skill não instala Graphify automaticamente e não altera `package.json` sem a
 
 Graphify CLI é obrigatório.
 
-Graphify Skill é opcional. Se Graphify for instalado como skill de projeto, deve ficar ao lado da `qa-api`:
+Graphify Skill também é obrigatória neste ecossistema, porque contém `manifest.json` com a versão travada. Graphify deve ficar ao lado da `qa-api`:
 
 ```text
 .agents/skills/
 ├── qa-api/
+├── qa-chamado/
 └── graphify/
 ```
 
@@ -145,7 +146,7 @@ Não copie Graphify para dentro de `qa-api`.
 
 ## Quando orientar instalação
 
-Se `graphify --version` não estiver disponível, registre a pendência e oriente o usuário/equipe a instalar explicitamente.
+Se `node .agents/skills/graphify/tools/graphify-runner.mjs --check` falhar, registre a pendência e oriente o usuário/equipe a instalar explicitamente a versão travada.
 
 Texto recomendado:
 
@@ -156,19 +157,19 @@ O fluxo oficial da skill QA API exige Graphify para gerar o grafo do backend.
 
 Instale uma das opções abaixo, conforme o ambiente da equipe:
 
-uv tool install graphifyy
+uv tool install graphifyy==0.9.8
 
 ou:
 
-pipx install graphifyy
+pipx install graphifyy==0.9.8
 
 ou, se a equipe optar por pip:
 
-pip install graphifyy
+pip install graphifyy==0.9.8
 
 Depois valide:
 
-graphify --version
+node .agents/skills/graphify/tools/graphify-runner.mjs --check
 
 E rode:
 

@@ -45,3 +45,4 @@ O lock é criado automaticamente e registra o backend usado no reindex.
 - Não crie `mapeamento-api.json` neste MVP.
 - Não instale Graphify automaticamente.
 - Não copie Graphify para dentro de `qa-api`.
+- Use a skill irmã `graphify` para travar e validar a versão do Graphify.

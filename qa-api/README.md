@@ -10,25 +10,34 @@ Skill para criar, revisar, preparar e analisar testes de API Cypress.
 .agents/skills/qa-api/
 ```
 
-2. Garanta Graphify CLI:
+2. Garanta a skill irmã `graphify`:
 
-```bash
-graphify --version
+```text
+.agents/skills/
+├── qa-api/
+├── qa-chamado/
+└── graphify/
 ```
 
-3. Se não existir, instale explicitamente:
+3. Instale a versão travada do Graphify CLI:
 
 ```bash
-uv tool install graphifyy
+uv tool install graphifyy==0.9.8
 ```
 
-ou:
+Alternativa:
 
 ```bash
-pipx install graphifyy
+pipx install graphifyy==0.9.8
 ```
 
-4. Configure no `package.json` do projeto consumidor:
+4. Valide:
+
+```bash
+node .agents/skills/graphify/tools/graphify-runner.mjs --check
+```
+
+5. Configure no `package.json` do projeto consumidor:
 
 ```json
 {
@@ -41,13 +50,13 @@ pipx install graphifyy
 
 Troque `../backend` pelo caminho relativo correto do backend.
 
-5. Rode:
+6. Rode:
 
 ```bash
 npm run qa:reindex
 ```
 
-6. Peça para a IA:
+7. Peça para a IA:
 
 ```text
 Crie testes para a API <nome-da-api>.
@@ -91,14 +100,15 @@ A skill usa esse lock para descobrir o backend real por `backendRoot` ou `backen
 
 ## Graphify
 
-Graphify CLI é obrigatório no fluxo oficial, mas deve ser instalado explicitamente pelo usuário/equipe.
+Graphify CLI é obrigatório no fluxo oficial e a versão fica travada na skill irmã `graphify`.
 
 Graphify não fica dentro da `qa-api`.
 
-Se Graphify for instalado como skill, deve ficar ao lado da `qa-api`:
+Graphify deve ficar ao lado da `qa-api`:
 
 ```text
 .agents/skills/
 ├── qa-api/
+├── qa-chamado/
 └── graphify/
 ```

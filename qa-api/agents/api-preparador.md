@@ -84,10 +84,10 @@ Antes de propor versões, descubra a versão do Node, o gerenciador de pacotes e
 existente. Instale versões compatíveis com o projeto; não force a versão mais recente nem migre
 `.eslintrc*` para flat config sem autorização.
 
-Graphify é obrigatório para o fluxo oficial de criação de testes de API, mas não é dependência npm a
-ser instalada automaticamente por este agente. Verifique apenas se `graphify --version` está
-disponível ou se a documentação do projeto explica a instalação. Se faltar, registre a pendência e
-aponte para `docs/graphify.md`.
+Graphify é obrigatório para o fluxo oficial de criação de testes de API, mas não é instalado
+automaticamente por este agente. Verifique se a skill irmã `graphify` existe, se
+`graphify/manifest.json` está disponível e se `node .agents/skills/graphify/tools/graphify-runner.mjs --check`
+passa. Se faltar, registre a pendência e aponte para `docs/graphify.md`.
 
 ---
 
@@ -238,6 +238,7 @@ Procure no projeto atual:
 - script `qa:reindex` em `package.json`;
 - script `qa:reindex:check` em `package.json`;
 - `qa-api/tools/qa-reindex.mjs` na instalação da skill;
+- `graphify/manifest.json` na skill irmã;
 - `graphify-out/graph.json`;
 - `graphify-out/GRAPH_REPORT.md`, quando existir;
 - `.qa-api/backend-graph.lock.json`;
@@ -305,7 +306,8 @@ Entregue uma tabela:
 | `qa:reindex` | OK/faltando | pedir autorização antes de alterar `package.json` |
 | `qa:reindex:check` | OK/faltando | pedir autorização antes de alterar `package.json` |
 | `qa-api/tools/qa-reindex.mjs` | OK/faltando | orientar instalação/cópia correta da skill |
-| Graphify | OK/não encontrado/documentado | não instalar; registrar instrução de instalação |
+| Graphify skill | OK/faltando | instalar/copiar como skill irmã, não dentro de `qa-api` |
+| Graphify CLI | OK/não encontrado/versão incompatível | não instalar automaticamente; registrar versão travada |
 | `graphify-out/graph.json` | OK/faltando/desatualizado | pedir `npm run qa:reindex` |
 | `.qa-api/backend-graph.lock.json` | OK/faltando/desatualizado | pedir `npm run qa:reindex` |
 

@@ -4,10 +4,12 @@ import { spawnSync } from "child_process";
 import fs from "fs";
 import path from "path";
 import process from "process";
+import { fileURLToPath } from "url";
 
 const DEFAULT_OUT = "graphify-out";
 const LOCK_DIR = ".qa-api";
 const LOCK_FILE = "backend-graph.lock.json";
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 
 function printHelp() {
   console.log(`Uso:
@@ -85,6 +87,11 @@ function commandText(result) {
   return [stdout, stderr].filter(Boolean).join("\n");
 }
 
+function extractVersion(output) {
+  const match = String(output || "").match(/\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?/);
+  return match ? match[0] : null;
+}
+
 function run(command, args, cwd) {
   return spawnSync(command, args, {
     cwd,
@@ -93,36 +100,95 @@ function run(command, args, cwd) {
   });
 }
 
-function getGraphifyVersion() {
-  const result = run("graphify", ["--version"], process.cwd());
+function graphifyManifestCandidates(projectRoot) {
+  return [
+    path.resolve(scriptDir, "..", "..", "graphify", "manifest.json"),
+    path.resolve(projectRoot, ".agents", "skills", "graphify", "manifest.json"),
+    path.resolve(projectRoot, "graphify", "manifest.json"),
+  ];
+}
+
+function readGraphifyManifest(projectRoot) {
+  const manifestPath = graphifyManifestCandidates(projectRoot).find((candidate) => fs.existsSync(candidate));
+
+  if (!manifestPath) {
+    fail(`Skill Graphify não encontrada.
+
+O fluxo oficial da skill QA API exige a skill irmã graphify com versão travada.
+
+Estrutura esperada:
+
+.agents/skills/
+├── qa-api/
+├── qa-chamado/
+└── graphify/
+
+Instale/copie a skill graphify e rode novamente:
+
+npm run qa:reindex`);
+  }
+
+  try {
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+    return { ...manifest, manifestPath };
+  } catch (error) {
+    fail(`Manifest do Graphify inválido: ${manifestPath}`);
+  }
+}
+
+function installInstructions(manifest) {
+  return `Instale a versão travada:
+
+${manifest.install?.uv || `uv tool install ${manifest.pythonPackage}==${manifest.version}`}
+
+ou:
+
+${manifest.install?.pipx || `pipx install ${manifest.pythonPackage}==${manifest.version}`}
+
+ou:
+
+${manifest.install?.pip || `pip install ${manifest.pythonPackage}==${manifest.version}`}
+
+Depois valide:
+
+${manifest.command} --version`;
+}
+
+function getGraphifyVersion(manifest) {
+  const command = manifest.command || "graphify";
+  const result = run(command, ["--version"], process.cwd());
 
   if (result.error || result.status !== 0) {
     fail(`Graphify não encontrado.
 
 O fluxo oficial da skill QA API exige Graphify para gerar o grafo do backend.
 
-Instale explicitamente conforme o ambiente da equipe:
+Versão esperada: ${manifest.version}
 
-uv tool install graphifyy
-
-ou:
-
-pipx install graphifyy
-
-ou:
-
-pip install graphifyy
-
-Depois valide:
-
-graphify --version
+${installInstructions(manifest)}
 
 E rode novamente:
 
 npm run qa:reindex`);
   }
 
-  return commandText(result);
+  const rawVersion = commandText(result);
+  const actualVersion = extractVersion(rawVersion);
+
+  if (actualVersion !== manifest.version) {
+    fail(`Versão do Graphify incompatível.
+
+Versão esperada: ${manifest.version}
+Versão encontrada: ${actualVersion || rawVersion}
+
+${installInstructions(manifest)}
+
+Depois rode novamente:
+
+npm run qa:reindex`);
+  }
+
+  return rawVersion;
 }
 
 function getGitCommit(backendRoot) {
@@ -201,6 +267,9 @@ function graphPathFromLock(projectRoot, lock) {
 }
 
 function runCheck(projectRoot) {
+  const graphifyManifest = readGraphifyManifest(projectRoot);
+  getGraphifyVersion(graphifyManifest);
+
   const lockPath = path.join(projectRoot, LOCK_DIR, LOCK_FILE);
 
   if (!fs.existsSync(lockPath)) {
@@ -276,9 +345,10 @@ Exemplo no package.json:
   const outDir = args.out || DEFAULT_OUT;
   const outputDir = safeOutputDir(projectRoot, outDir);
 
-  // Graphify não é instalado automaticamente para manter instalação e versões sob controle da equipe.
-  const graphifyVersion = getGraphifyVersion();
-  const graphifyResult = run("graphify", ["."], backendRoot);
+  // Graphify fica em skill irmã para manter versão travada e reutilizável.
+  const graphifyManifest = readGraphifyManifest(projectRoot);
+  const graphifyVersion = getGraphifyVersion(graphifyManifest);
+  const graphifyResult = run(graphifyManifest.command || "graphify", ["."], backendRoot);
 
   if (graphifyResult.error || graphifyResult.status !== 0) {
     fail(
@@ -318,6 +388,8 @@ Caminhos verificados:
     backendRootAbsolute: toPosixPath(backendRoot),
     backendCommit: getGitCommit(backendRoot),
     graphifyVersion,
+    graphifyExpectedVersion: graphifyManifest.version,
+    graphifyManifest: relativeToProject(projectRoot, graphifyManifest.manifestPath),
     graphJson: relativeToProject(projectRoot, finalGraphJson),
     graphReport: relativeToProject(projectRoot, path.join(outputDir, "GRAPH_REPORT.md")),
     sourceGraphJson: toPosixPath(sourceGraphJson),

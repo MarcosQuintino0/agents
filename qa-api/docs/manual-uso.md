@@ -12,13 +12,28 @@ No projeto consumidor:
 .agents/skills/qa-api/
 ```
 
-2. garanta que Graphify CLI esteja instalado:
+2. garanta que a skill irmã `graphify` esteja instalada:
 
-```bash
-graphify --version
+```text
+.agents/skills/
+├── qa-api/
+├── qa-chamado/
+└── graphify/
 ```
 
-3. configure no `package.json`:
+3. instale a versão travada do Graphify CLI:
+
+```bash
+uv tool install graphifyy==0.9.8
+```
+
+4. valide:
+
+```bash
+node .agents/skills/graphify/tools/graphify-runner.mjs --check
+```
+
+5. configure no `package.json`:
 
 ```json
 {
@@ -29,15 +44,15 @@ graphify --version
 }
 ```
 
-4. troque `../backend` pelo caminho relativo correto do backend;
+6. troque `../backend` pelo caminho relativo correto do backend;
 
-5. rode:
+7. rode:
 
 ```bash
 npm run qa:reindex
 ```
 
-6. peça para a IA:
+8. peça para a IA:
 
 ```text
 Crie testes para a API <nome-da-api>.
@@ -93,39 +108,48 @@ npm run qa:reindex
 
 A skill não instala Graphify automaticamente.
 
-Se `graphify --version` falhar, use a orientação de `docs/graphify.md` e instale explicitamente conforme o ambiente da equipe:
+Se a validação da skill `graphify` falhar, use a orientação de `docs/graphify.md` e instale explicitamente a versão travada:
 
 ```bash
-uv tool install graphifyy
+uv tool install graphifyy==0.9.8
 ```
 
 ou:
 
 ```bash
-pipx install graphifyy
+pipx install graphifyy==0.9.8
 ```
 
 ou:
 
 ```bash
-pip install graphifyy
+pip install graphifyy==0.9.8
 ```
 
 O pacote Python é `graphifyy`, mas o comando exposto no terminal é `graphify`.
 
 ## Graphify Skill
 
-Graphify CLI é obrigatório. Graphify Skill é opcional.
+Graphify CLI é obrigatório. Graphify Skill também é obrigatória porque guarda a versão travada.
 
-Se Graphify for instalado como skill de projeto, deve ficar ao lado da `qa-api`:
+Graphify deve ficar ao lado da `qa-api`:
 
 ```text
 .agents/skills/
 ├── qa-api/
+├── qa-chamado/
 └── graphify/
 ```
 
 Não copie Graphify para dentro de `qa-api`.
+
+O Graphify oficial também possui comandos opcionais de configuração por plataforma de IA, como Codex, Cursor, Claude e Agent Skills. Esses comandos não são obrigatórios para criar testes com `qa-api`; eles servem para fazer a IA consultar o grafo de forma mais automática em perguntas gerais sobre o projeto.
+
+Para saber mais sobre esses tipos de configuração, consulte o README da skill Graphify deste projeto:
+
+```text
+.agents/skills/graphify/README.md
+```
 
 ## Regras de segurança
 

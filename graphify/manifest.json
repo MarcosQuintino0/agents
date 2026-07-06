@@ -1,0 +1,13 @@
+{
+  "pythonPackage": "graphifyy",
+  "command": "graphify",
+  "version": "0.9.8",
+  "pythonRequires": ">=3.10",
+  "install": {
+    "uv": "uv tool install graphifyy==0.9.8",
+    "pipx": "pipx install graphifyy==0.9.8",
+    "pip": "pip install graphifyy==0.9.8"
+  },
+  "source": "https://pypi.org/project/graphifyy/",
+  "lockedAt": "2026-07-06"
+}

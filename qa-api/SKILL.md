@@ -72,17 +72,20 @@ O usuário deve trocar `../backend` pelo caminho relativo correto do backend. N�
 
 Se o grafo existir, use-o como mapa estrutural do backend. Graphify é um GPS, não o contrato final.
 
-A skill `qa-api` não contém Graphify internamente. Graphify é uma dependência externa obrigatória no fluxo oficial.
+A skill `qa-api` não contém Graphify internamente. Graphify é uma skill irmã obrigatória no fluxo oficial.
 
-Quando instalado como skill de projeto, Graphify deve ficar ao lado da `qa-api`:
+Graphify deve ficar ao lado da `qa-api`:
 
 ```text
 .agents/skills/
 ├── qa-api/
+├── qa-chamado/
 └── graphify/
 ```
 
 Não copie Graphify para dentro de `qa-api`.
+
+A versão esperada fica travada em `graphify/manifest.json`. O `qa-reindex.mjs` deve parar se a versão instalada do comando `graphify` for diferente.
 
 Sempre leia o código real do backend antes de definir:
 
