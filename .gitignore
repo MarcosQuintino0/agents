@@ -1,6 +1,0 @@
-node_modules/
-npm-debug.log*
-*.tgz
-.faillens/
-.agents/skills/qa-api-testing.backup-*/
-coverage/

@@ -1,4 +1,0 @@
-interface:
-  display_name: "QA API Testing"
-  short_description: "Create, review, and analyze evidence-based Cypress API tests."
-  default_prompt: "Use qa-api-testing to create evidence-based Cypress API tests for a backend API."
