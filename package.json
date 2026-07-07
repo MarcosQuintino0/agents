@@ -4,7 +4,7 @@
   "description": "Instalador das skills QA API, QA Chamado e Graphify.",
   "type": "module",
   "bin": {
-    "qa-skills": "./bin/qa-skills.mjs"
+    "qa-skills": "bin/qa-skills.mjs"
   },
   "files": [
     "bin/",
