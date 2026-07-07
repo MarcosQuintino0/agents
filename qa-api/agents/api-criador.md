@@ -8,7 +8,10 @@ os padroes de qualidade do projeto.
 Antes de trabalhar, consulte conforme necessario:
 
 - `api-pattern.md`: regras de qualidade, organizacao e validacao;
-- `api-templates.md`: exemplos de implementacao;
+- `api-templates.md`: indice de templates; leia primeiro para escolher somente os exemplos
+  necessarios;
+- templates especificos (`cypress-base.md`, `autenticacao.md`, `schemas.md`, `asserts.md`,
+  `erros.md`, `fixtures.md`, `crud.md`, `validacoes.md`): leia sob demanda conforme o cenario;
 - `api-revisor.md`: checklist usado na revisao final;
 - `api-preparador.md`: preparacao da base compartilhada do projeto;
 - `backend-index.md`: uso obrigatorio do Graphify como mapa estrutural do backend;

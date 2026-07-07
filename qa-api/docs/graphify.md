@@ -15,6 +15,15 @@ A versão esperada fica travada em `graphify/manifest.json`.
 
 ## Configuração mínima no projeto consumidor
 
+Fluxo recomendado:
+
+```bash
+npx @marcosquintino/qa-skills install --backend ../backend
+```
+
+Esse comando copia as skills, instala/valida `graphifyy==0.9.8` e configura os scripts abaixo
+quando existir `package.json`.
+
 No `package.json`:
 
 ```json
@@ -52,9 +61,14 @@ Isso valida se o grafo e o lock existem e se o commit do backend ainda bate, qua
 
 ## Instalação
 
-A skill não instala Graphify automaticamente.
+No fluxo recomendado, o instalador npm instala ou valida Graphify:
 
-Se Graphify não estiver disponível, instale explicitamente a versão travada.
+```bash
+npx @marcosquintino/qa-skills install
+```
+
+Se Graphify não estiver disponível em uma instalação manual, instale explicitamente a versão
+travada.
 
 Opção recomendada:
 
@@ -84,7 +98,7 @@ Observação: o pacote Python é `graphifyy`, mas o comando no terminal é `grap
 
 ## Quando Graphify não for encontrado
 
-Use esta orientação:
+Use esta orientação quando o projeto foi configurado manualmente:
 
 ```text
 Graphify não encontrado.

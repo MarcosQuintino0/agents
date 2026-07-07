@@ -4,13 +4,18 @@ Skill para criar, revisar, preparar e analisar testes de API Cypress.
 
 ## Fluxo oficial
 
-1. Instale/copie a skill no projeto consumidor:
+1. No projeto consumidor, rode o instalador oficial:
 
-```text
-.agents/skills/qa-api/
+```bash
+npx @marcosquintino/qa-skills install --backend ../backend
 ```
 
-2. Garanta a skill irmã `graphify`:
+Troque `../backend` pelo caminho relativo correto do backend.
+
+Esse comando copia as skills, instala/valida `graphifyy==0.9.8` e configura os scripts
+`qa:reindex` e `qa:reindex:check` quando o projeto tiver `package.json`.
+
+2. Confirme a estrutura instalada:
 
 ```text
 .agents/skills/
@@ -19,7 +24,30 @@ Skill para criar, revisar, preparar e analisar testes de API Cypress.
 └── graphify/
 ```
 
-3. Instale a versão travada do Graphify CLI:
+3. Rode:
+
+```bash
+npm run qa:reindex
+```
+
+4. Peça para a IA:
+
+```text
+Crie testes para a API <nome-da-api>.
+```
+
+### Instalação manual
+
+Se o ambiente não puder usar o instalador npm, copie manualmente:
+
+```text
+.agents/skills/
+├── qa-api/
+├── qa-chamado/
+└── graphify/
+```
+
+Depois instale a versão travada do Graphify CLI:
 
 ```bash
 uv tool install graphifyy==0.9.8
@@ -31,13 +59,13 @@ Alternativa:
 pipx install graphifyy==0.9.8
 ```
 
-4. Valide:
+Valide:
 
 ```bash
 node .agents/skills/graphify/tools/graphify-runner.mjs --check
 ```
 
-5. Configure no `package.json` do projeto consumidor:
+E configure no `package.json` do projeto consumidor:
 
 ```json
 {
@@ -46,20 +74,6 @@ node .agents/skills/graphify/tools/graphify-runner.mjs --check
     "qa:reindex:check": "node .agents/skills/qa-api/tools/qa-reindex.mjs --check"
   }
 }
-```
-
-Troque `../backend` pelo caminho relativo correto do backend.
-
-6. Rode:
-
-```bash
-npm run qa:reindex
-```
-
-7. Peça para a IA:
-
-```text
-Crie testes para a API <nome-da-api>.
 ```
 
 ## O que a skill faz
@@ -75,10 +89,25 @@ Crie testes para a API <nome-da-api>.
 - revisa a própria saída;
 - analisa reports e entrega problemas numerados para a skill `qa-chamado`.
 
+## Templates por intencao
+
+`templates/api-templates.md` agora e um indice. A skill deve ler somente os templates necessarios
+para a tarefa atual:
+
+- `cypress-base.md`: camada comum, cliente HTTP, log mascarado e config base;
+- `autenticacao.md`: login, token, sem autenticacao, permissao e seguranca;
+- `schemas.md`: AJV e schemas de resposta/erro;
+- `asserts.md`: asserts genericos e asserts do recurso;
+- `erros.md`: contrato de erro, vazamento interno e mensagens;
+- `fixtures.md`: payloads, massa de dados, hooks e cleanup;
+- `crud.md`: cliente do recurso, CRUD, persistencia e listagem;
+- `validacoes.md`: obrigatoriedade, limites, tipos e validacoes data-driven.
+
 ## O que a skill não faz automaticamente
 
 - não exige arquivo `.yml`;
-- não instala dependências sem autorização;
+- não instala dependências durante a criação dos testes; a instalação do Graphify acontece no setup
+  explícito com `npx @marcosquintino/qa-skills install`;
 - não altera autenticação sem autorização;
 - não altera schemas compartilhados sem autorização;
 - não cria testes oficiais sem Graphify;

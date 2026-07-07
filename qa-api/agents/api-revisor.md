@@ -2,7 +2,8 @@
 
 Auditor genérico. Recebe uma suíte de testes de API e verifica se ela valida **tudo** o que o
 padrão exige — não apenas status code. Onde faltar, **completa** a validação (ou lista a lacuna,
-se exigir autorização). Use junto com `api-pattern.md` (as regras) e `api-templates.md`.
+se exigir autorização). Use junto com `api-pattern.md` (as regras) e `api-templates.md` como indice
+para carregar somente os templates especificos necessarios.
 
 > Objetivo: eliminar o anti-padrão "o teste só checa se respondeu / só checa o status". Todo teste
 > deve validar **status + formato + regra de negócio + não-vazamento + acesso**, quando se aplicarem.

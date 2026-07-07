@@ -19,11 +19,19 @@ graphifyy==0.9.8
 
 O pacote Python é `graphifyy`, mas o comando exposto no terminal é `graphify`.
 
-## Instalação
+## Instalação recomendada
 
-Não instale automaticamente sem pedido explícito do usuário.
+No projeto consumidor, prefira o instalador oficial do pacote de skills:
 
-Opção recomendada:
+```bash
+npx @marcosquintino/qa-skills install
+```
+
+Esse comando copia as skills e valida/instala a versão travada do Graphify CLI.
+
+## Instalação manual
+
+Use somente quando o ambiente não puder rodar o instalador npm.
 
 ```bash
 uv tool install graphifyy==0.9.8

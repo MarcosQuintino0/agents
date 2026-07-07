@@ -10,11 +10,23 @@ graphifyy==0.9.8
 
 ## Opção recomendada
 
+No projeto consumidor:
+
+```bash
+npx @marcosquintino/qa-skills install
+```
+
+Esse comando copia as skills e valida/instala `graphifyy==0.9.8`.
+
+## Instalação manual
+
+Use somente quando o ambiente não puder rodar o instalador npm.
+
 ```bash
 uv tool install graphifyy==0.9.8
 ```
 
-## Alternativas
+## Alternativas manuais
 
 ```bash
 pipx install graphifyy==0.9.8
@@ -32,7 +44,8 @@ node .agents/skills/graphify/tools/graphify-runner.mjs --check
 
 - O pacote Python é `graphifyy`.
 - O comando exposto no terminal é `graphify`.
-- A skill não instala Graphify automaticamente.
+- Durante o uso da skill, Graphify não é instalado de novo. A instalação acontece no setup
+  explícito com `npx @marcosquintino/qa-skills install` ou no fluxo manual acima.
 - A troca de versão deve ser intencional e registrada no `manifest.json`.
 
 ## Integração por plataforma de IA

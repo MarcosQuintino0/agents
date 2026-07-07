@@ -1,0 +1,23 @@
+{
+  "name": "@marcosquintino/qa-skills",
+  "version": "0.1.0",
+  "description": "Instalador das skills QA API, QA Chamado e Graphify.",
+  "type": "module",
+  "bin": {
+    "qa-skills": "./bin/qa-skills.mjs"
+  },
+  "files": [
+    "bin/",
+    "qa-api/",
+    "qa-chamado/",
+    "graphify/",
+    "README.md"
+  ],
+  "scripts": {
+    "check": "node --check bin/qa-skills.mjs && node bin/qa-skills.mjs --help && node bin/qa-skills.mjs install --help"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "UNLICENSED"
+}

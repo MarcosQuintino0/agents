@@ -6,13 +6,18 @@ Esta skill organiza agentes de testes de API Cypress em um fluxo único, reutili
 
 No projeto consumidor:
 
-1. copie/instale a skill em:
+1. rode o instalador oficial:
 
-```text
-.agents/skills/qa-api/
+```bash
+npx @marcosquintino/qa-skills install --backend ../backend
 ```
 
-2. garanta que a skill irmã `graphify` esteja instalada:
+Troque `../backend` pelo caminho relativo correto do backend.
+
+Esse comando copia `qa-api`, `qa-chamado` e `graphify`, instala/valida `graphifyy==0.9.8` e
+configura `qa:reindex` e `qa:reindex:check` quando existir `package.json`.
+
+2. confirme a estrutura:
 
 ```text
 .agents/skills/
@@ -21,19 +26,44 @@ No projeto consumidor:
 └── graphify/
 ```
 
-3. instale a versão travada do Graphify CLI:
+3. rode:
+
+```bash
+npm run qa:reindex
+```
+
+4. peça para a IA:
+
+```text
+Crie testes para a API <nome-da-api>.
+```
+
+O usuário não cria `.yml`. O `qa:reindex` cria automaticamente `.qa-api/backend-graph.lock.json`.
+
+### Fluxo manual
+
+Se o ambiente não puder usar o instalador npm, copie manualmente:
+
+```text
+.agents/skills/
+├── qa-api/
+├── qa-chamado/
+└── graphify/
+```
+
+Depois instale a versão travada do Graphify CLI:
 
 ```bash
 uv tool install graphifyy==0.9.8
 ```
 
-4. valide:
+Valide:
 
 ```bash
 node .agents/skills/graphify/tools/graphify-runner.mjs --check
 ```
 
-5. configure no `package.json`:
+Configure no `package.json`:
 
 ```json
 {
@@ -43,22 +73,6 @@ node .agents/skills/graphify/tools/graphify-runner.mjs --check
   }
 }
 ```
-
-6. troque `../backend` pelo caminho relativo correto do backend;
-
-7. rode:
-
-```bash
-npm run qa:reindex
-```
-
-8. peça para a IA:
-
-```text
-Crie testes para a API <nome-da-api>.
-```
-
-O usuário não cria `.yml`. O `qa:reindex` cria automaticamente `.qa-api/backend-graph.lock.json`.
 
 ## O que o reindex deve gerar
 
@@ -88,6 +102,22 @@ Analise o report da API empresa.
 | `agents/api-revisor.md` | Revisar uma suíte existente e identificar lacunas. |
 | `agents/api-analisador.md` | Analisar `report.json` e entregar problemas numerados para possível uso pela skill `qa-chamado`. |
 
+## Templates sob demanda
+
+`templates/api-templates.md` e apenas o indice dos templates tecnicos. Use-o para escolher os
+arquivos certos e evitar carregar exemplos que nao pertencem ao cenario atual.
+
+| Cenario | Template |
+| --- | --- |
+| Camada comum, cliente HTTP, log mascarado e config base | `templates/cypress-base.md` |
+| Login, token, sem autenticacao, permissao e seguranca | `templates/autenticacao.md` |
+| AJV e schemas de resposta/erro | `templates/schemas.md` |
+| Asserts genericos e asserts do recurso | `templates/asserts.md` |
+| Contrato de erro, vazamento interno e mensagens | `templates/erros.md` |
+| Payloads, massa de dados, hooks e cleanup | `templates/fixtures.md` |
+| Cliente do recurso, CRUD, persistencia e listagem | `templates/crud.md` |
+| Obrigatoriedade, limites, tipos e validacoes data-driven | `templates/validacoes.md` |
+
 ## Regra do Graphify
 
 Graphify é obrigatório no fluxo oficial.
@@ -106,9 +136,14 @@ npm run qa:reindex
 
 ## Instalação do Graphify
 
-A skill não instala Graphify automaticamente.
+No fluxo recomendado, o instalador npm instala ou valida Graphify:
 
-Se a validação da skill `graphify` falhar, use a orientação de `docs/graphify.md` e instale explicitamente a versão travada:
+```bash
+npx @marcosquintino/qa-skills install
+```
+
+Se a instalação for manual ou se a validação da skill `graphify` falhar, instale explicitamente a
+versão travada:
 
 ```bash
 uv tool install graphifyy==0.9.8

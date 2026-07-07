@@ -8,7 +8,19 @@ Skill compartilhada para validar e rodar a versão travada do Graphify usada pel
 graphifyy==0.9.8
 ```
 
-## Instalação
+## Instalação recomendada
+
+No projeto consumidor:
+
+```bash
+npx @marcosquintino/qa-skills install
+```
+
+Esse comando instala as skills e valida/instala `graphifyy==0.9.8`.
+
+## Instalação manual
+
+Use somente quando o ambiente não puder rodar o instalador npm:
 
 ```bash
 uv tool install graphifyy==0.9.8

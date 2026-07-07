@@ -119,7 +119,11 @@ Sempre leia o código real do backend antes de definir:
 - `pattern/05-exemplos.md`: exemplos de aplicação das regras.
 - `pattern/06-organizacao-codigo.md`: organização de support, schemas e erros.
 - `pattern/07-portabilidade.md`: adaptação para novos produtos.
-- `templates/api-templates.md`: exemplos técnicos.
+- `templates/api-templates.md`: indice dos templates tecnicos, com roteamento por intencao.
+- `templates/cypress-base.md`, `templates/autenticacao.md`, `templates/schemas.md`,
+  `templates/asserts.md`, `templates/erros.md`, `templates/fixtures.md`, `templates/crud.md` e
+  `templates/validacoes.md`: exemplos tecnicos sob demanda. Leia somente os arquivos aplicaveis ao
+  cenario atual.
 - `templates/api-perfil.template.md`: checklist de perfil do produto.
 - `docs/graphify.md`: como rodar e validar Graphify.
 - `docs/prompts.md`: prompts curtos recomendados para o usuário.

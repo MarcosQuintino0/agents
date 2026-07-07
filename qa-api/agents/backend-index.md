@@ -127,7 +127,13 @@ O comando deve:
 - copiar `graphify-out/GRAPH_REPORT.md`, quando existir;
 - gerar ou atualizar `.qa-api/backend-graph.lock.json`.
 
-A skill não instala Graphify automaticamente e não altera `package.json` sem autorização explícita.
+Durante a criação/revisão de testes, a skill não instala Graphify e não altera `package.json`
+sem autorização explícita. A instalação recomendada acontece antes, no setup do projeto
+consumidor, com:
+
+```bash
+npx @marcosquintino/qa-skills install
+```
 
 ## Graphify CLI e Graphify Skill
 
