@@ -1,60 +1,35 @@
 ---
 name: graphify
-description: Valida e roda a versão travada do Graphify usada pelas skills de QA. Use quando precisar instalar, verificar versão, diagnosticar ou executar Graphify para gerar graphify-out/graph.json, GRAPH_REPORT.md e artefatos de grafo para skills como qa-api.
+description: Valida e executa a versão travada do Graphify usada pelas skills de QA. Use quando precisar instalar, verificar versão, diagnosticar ou executar Graphify para gerar grafo estrutural de backend e artefatos usados por qa-api.
 ---
 
 # Skill: Graphify
 
-Use esta skill quando o usuário precisar configurar, validar ou rodar Graphify para gerar grafo estrutural de um projeto.
+Use esta skill para configurar, validar ou executar Graphify no ecossistema de QA.
 
 ## Versão travada
 
 Leia `manifest.json` antes de orientar instalação ou execução.
 
-Versão atual travada:
-
 ```text
 graphifyy==0.9.8
 ```
 
-O pacote Python é `graphifyy`, mas o comando exposto no terminal é `graphify`.
+O pacote Python é `graphifyy`; o comando exposto no terminal é `graphify`.
 
 ## Instalação recomendada
 
-No projeto consumidor, prefira o instalador oficial do pacote de skills:
+No projeto consumidor, prefira:
 
 ```bash
-npx @marcosquintino/qa-skills install
+npx @marcosquintino/qa-skills install --backend ../backend
 ```
 
-Esse comando copia as skills e valida/instala a versão travada do Graphify CLI.
+Esse comando copia as skills irmãs e instala/valida a versão travada do Graphify CLI.
 
-## Instalação manual
+## Uso padronizado
 
-Use somente quando o ambiente não puder rodar o instalador npm.
-
-```bash
-uv tool install graphifyy==0.9.8
-```
-
-Alternativas:
-
-```bash
-pipx install graphifyy==0.9.8
-pip install graphifyy==0.9.8
-```
-
-Depois valide:
-
-```bash
-graphify --version
-```
-
-## Runner
-
-Use `tools/graphify-runner.mjs` para validar versão e executar Graphify de forma padronizada.
-
-Exemplos:
+Use `tools/graphify-runner.mjs` para validar versão e executar Graphify:
 
 ```bash
 node .agents/skills/graphify/tools/graphify-runner.mjs --check
@@ -63,20 +38,22 @@ node .agents/skills/graphify/tools/graphify-runner.mjs --backend ../backend
 
 ## Relação com qa-api
 
-A skill `qa-api` depende desta skill como irmã:
+Graphify deve ficar como skill irmã:
 
 ```text
 .agents/skills/
-├── qa-api/
-├── qa-chamado/
-└── graphify/
+- qa-api/
+- qa-chamado/
+- graphify/
 ```
 
 Não copie Graphify para dentro de `qa-api`.
 
+O `qa:reindex` da `qa-api` organiza `graph.json`, `graph.html`, `GRAPH_REPORT.md` quando existir, e `backend-graph.lock.json` em `.agents/state/qa-api/`.
+
 ## Regras
 
 - Graphify é mapa estrutural, não contrato final.
-- Não instale dependências sem autorização explícita.
 - Não aceite versão diferente da travada sem atualizar `manifest.json`.
 - Não exponha tokens, cookies, senhas ou credenciais em logs.
+- Comandos oficiais por plataforma de IA (`graphify codex install`, `graphify cursor install`, etc.) são opcionais para `qa-api`; eles não substituem `qa:reindex`.

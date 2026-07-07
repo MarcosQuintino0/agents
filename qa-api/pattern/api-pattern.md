@@ -34,6 +34,7 @@ próprios e mantêm ponteiros no lugar de origem.
 | **Convenções** (nomenclatura do `it`, aninhamento, tags, rastreabilidade, comentários de fase) | `pattern/03-convencoes.md` | seção 10 |
 | **Comentários e documentação viva** (JSDoc de contrato, categorias de comentário obrigatório) | `pattern/04-comentarios-jsdoc.md` | seção 11 |
 | Adaptar o padrão a um novo projeto | `pattern/07-portabilidade.md` | seção 12 |
+| Checklist comum de criação e revisão | `pattern/08-checklist-qualidade.md` | gate operacional |
 | O que não fazer (anti-padrões universais) | este arquivo, seção 13 | — |
 
 > Regra de uso: os agentes executores (`api-criador.md`, `api-revisor.md`) citam e aplicam
@@ -173,29 +174,29 @@ representam vazamento naquela stack, como `br.com...`, `System.NullReferenceExce
 
 ```
 cypress/
-├── e2e/apis/<api>/
-│   ├── crud.cy.js                 ← fluxo feliz + regras de negócio (404, 409…)
-│   ├── seguranca.cy.js            ← sem autenticação / sem permissão
-│   ├── validacoes.cy.js           ← obrigatórios, limites, tipos
-│   └── _support/                  ← bastidores da API (NÃO são specs)
-│       ├── api.js                 ←   chamadas HTTP do recurso
-│       ├── payload.js             ←   massa de dados (factories)
-│       ├── asserts.js             ←   SÓ regra de negócio (o que o schema não cobre)
-│       └── helpers.js             ←   hooks, cleanup/restauração, massa de apoio
-│
-├── fixtures/schemas/
-│   ├── <api>.schema.json          ← contrato de SUCESSO (derivado do backend)
-│   ├── erro.schema.json           ← erro de negócio/HTTP (404, 409) — genérico
-│   └── erro-validacao.schema.json ← erro de validação de campo (400) — genérico
-│
-└── support/                       ← genérico, compartilhado por TODAS as APIs
-    ├── api/
-    │   ├── client.js              ← wrapper de request (baseUrl + headers + log)
-    │   ├── schema.js              ← validarContra(nomeSchema, corpo) via ajv
-    │   └── asserts.base.js        ← BaseAssert (status, semConteudo, erroNegocio, erroValidacao…)
-    └── assertions/
-        ├── error.assertions.js    ← guard "não vaza interno" + asserts de auth/permissão
-        └── pagination.assertions.js
+|-- e2e/apis/<api>/
+|   |-- crud.cy.js                 ← fluxo feliz + regras de negócio (404, 409…)
+|   |-- seguranca.cy.js            ← sem autenticação / sem permissão
+|   |-- validacoes.cy.js           ← obrigatórios, limites, tipos
+|   `-- _support/                  ← bastidores da API (NÃO são specs)
+|       |-- api.js                 ←   chamadas HTTP do recurso
+|       |-- payload.js             ←   massa de dados (factories)
+|       |-- asserts.js             ←   SÓ regra de negócio (o que o schema não cobre)
+|       `-- helpers.js             ←   hooks, cleanup/restauração, massa de apoio
+|
+|-- fixtures/schemas/
+|   |-- <api>.schema.json          ← contrato de SUCESSO (derivado do backend)
+|   |-- erro.schema.json           ← erro de negócio/HTTP (404, 409) — genérico
+|   `-- erro-validacao.schema.json ← erro de validação de campo (400) — genérico
+|
+`-- support/                       ← genérico, compartilhado por TODAS as APIs
+    |-- api/
+    |   |-- client.js              ← wrapper de request (baseUrl + headers + log)
+    |   |-- schema.js              ← validarContra(nomeSchema, corpo) via ajv
+    |   `-- asserts.base.js        ← BaseAssert (status, semConteudo, erroNegocio, erroValidacao…)
+    `-- assertions/
+        |-- error.assertions.js    ← guard "não vaza interno" + asserts de auth/permissão
+        `-- pagination.assertions.js
 ```
 
 Regra de ouro: **só `*.cy.js` são testes.** O específico da API fica em `_support/`; o que se

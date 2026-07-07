@@ -88,8 +88,8 @@ regra esperada. Não marque bug por analogia com outra API ou produto.
 
 Este catálogo é a fonte única dos tipos de teste do projeto. Os agentes executores (creator,
 reviewer) devem avaliá-lo por inteiro durante a descoberta e apenas aplicá-lo — não reescrevê-lo.
-Avaliar não significa criar todos os testes: implemente somente os cenários classificados como
-`Aplicavel`.
+Avaliar não significa criar todos os testes. O agente deve implementar o que for claramente aplicável
+e registrar o restante como cobertura avaliada, com explicação curta para QA.
 
 A coluna `Classificacao` usa as categorias definidas em `Como interpretar as regras`.
 
@@ -106,26 +106,50 @@ A coluna `Classificacao` usa as categorias definidas em `Como interpretar as reg
 | Permissao insuficiente                | Quando aplicavel              | Quando houver usuario/credencial sem permissao configurado; se faltar massa, documentar lacuna | Confirmar bloqueio por operacao sensivel e integridade em escritas       |
 | Obrigatoriedade                       | Contratual                    | Para campos obrigatorios confirmados                                 | Campo ausente e particoes distintas relevantes                           |
 | Tipo, formato e enum invalidos        | Contratual                    | Quando houver restricao confirmada                                   | Um representante relevante por particao invalida                         |
-| Valores limite                        | Contratual                    | Quando houver minimo, maximo, tamanho ou intervalo confirmado        | Limite valido e primeiro valor invalido de cada lado aplicavel           |
+| Valores limite                        | Contratual / baseado em risco | Quando houver limite confirmado; se campo livre não tiver limite claro, marcar `Nao confirmado` | Limite válido e primeiro inválido; sem limite claro, teste seguro de robustez quando houver oráculo |
+| Payload excessivo                     | Baseado em risco              | Quando o cliente envia texto, lista, arquivo ou body que pode crescer demais | Garantir resposta controlada, sem 500, sem vazamento e sem estado quebrado |
 | Regra de negocio de entrada           | Contratual                    | Para duplicidade, vinculo, imutabilidade, combinacao ou estado       | Validar resultado exato definido pelo contrato                           |
+| Campo desconhecido                    | Baseado em risco              | Quando payload JSON aceita campos extras enviados pelo cliente       | Confirmar rejeição ou ignorar sem persistir campo indevido               |
+| Mass assignment                       | Baseado em risco              | Quando cliente pode enviar `role`, `admin`, `status`, `tenantId`, `createdAt`, `ownerId` ou similares | Confirmar que campo sensível/controlado não é aceito nem persistido      |
 | Listagem, filtro, ordenacao e pagina  | Quando aplicavel              | Quando esses recursos existirem                                      | Validar itens, metadados e coerencia do resultado                        |
+| Content-Type invalido                 | Baseado em risco              | Quando endpoint espera JSON ou formato específico                    | Enviar formato/header incompatível e validar erro controlado             |
+| Metodo nao permitido                  | Baseado em risco              | Quando uma rota expõe apenas alguns métodos HTTP                     | Confirmar resposta controlada para método não suportado                  |
 | Repeticao, duplicidade e idempotencia | Contratual / baseado em risco | Quando houver regra explicita ou risco plausivel de inconsistencia   | Validar regra exata ou apenas comportamento controlado                   |
 | Entrada estruturalmente invalida      | Baseado em risco              | Body ausente, identificador/query invalida ou estrutura incompativel | Selecionar poucos casos de alto valor                                    |
 | Relacionamento inexistente            | Baseado em risco              | Quando a operacao depende de outra entidade                          | Confirmar tratamento controlado e ausencia de persistencia parcial       |
 | Campo controlado pelo backend         | Baseado em risco              | Quando o cliente consegue enviar id, auditoria, status ou calculado  | Confirmar que nao foi alterado indevidamente                             |
+| Object-level authorization            | Baseado em risco              | Quando recurso pertence a usuário, cliente, empresa, unidade, dono ou grupo | Usuário de outro dono não deve ler/alterar o recurso                     |
+| Property-level authorization          | Baseado em risco              | Quando perfis diferentes enxergam ou alteram campos diferentes       | Confirmar que campo protegido não é exibido nem alterado indevidamente   |
+| Concorrencia                          | Baseado em risco              | Quando duas escritas simultâneas podem sobrescrever estado ou saldo  | Propor somente se houver risco real e forma segura de executar           |
+| Rate limit                            | Baseado em risco              | Quando existir regra de limite de chamadas ou risco claro de abuso   | Validar limite documentado ou registrar `Nao confirmado`                 |
+| Timeout                               | Baseado em risco              | Quando consulta, filtro ou payload pode gerar operação muito lenta   | Validar falha controlada; não fazer teste de carga no fluxo padrão       |
 | Integridade apos operacao rejeitada   | Essencial                     | Quando uma operacao negativa pode alterar dados e existe verificacao | Consultar novamente e confirmar ausencia de alteracao indevida           |
 | Contrato de erro e nao-vazamento      | Essencial                     | Em todo cenario de erro                                              | Incorporar status/shape/mensagem definidos e nenhum detalhe interno      |
 
 Regras para usar o catálogo:
 
 - cada tipo deve aparecer na cobertura do catálogo do plano (`COBERTURA DO CATALOGO`) como
-  `Aplicavel`, `Ja coberto`, `Nao aplicavel` ou `Nao confirmado`;
+  `Aplicavel`, `Ja coberto`, `Nao aplicavel`, `Nao confirmado` ou `Incorporado`;
 - quando um tipo exigir cenário próprio, leve-o também para a `MATRIZ DE CENARIOS`;
 - quando um tipo for validação incorporada, indique em quais cenários ele será coberto sem criar
   linhas ou testes artificiais;
 - validações como schema, não-vazamento e persistência devem ser incorporadas ao cenário funcional,
   não transformadas automaticamente em novos `it()`;
 - não repita variações que exercitam a mesma regra e recebem o mesmo tratamento.
+- use `Nao confirmado` quando houver indício, mas faltar regra, massa, credencial, perfil ou decisão
+  do produto;
+- use `Nao aplicavel` somente quando o conceito claramente não existir naquela API;
+- explique `@cobertura` em uma frase simples, sem jargão técnico desnecessário.
+
+Exemplos de `@cobertura` com linguagem simples:
+
+```text
+@cobertura @valor-limite nao-confirmado - o backend não informa tamanho máximo para name/email
+@cobertura @object-level-authorization nao-confirmado - parece haver dono do recurso, mas falta usuário de outro dono para testar
+@cobertura @rate-limit nao-confirmado - não encontrei regra de limite de chamadas para esta API
+@cobertura @relacionamento-inexistente nao-aplicavel - esta API não recebe id de outro recurso no payload
+@cobertura @mass-assignment incorporado - o teste de campo controlado já valida que o cliente não altera id/status
+```
 
 Fronteira `@recurso-inexistente` vs `@relacionamento-inexistente`: o **alvo** da operação (id na URL)
 não existe é `@recurso-inexistente`; uma **referência estrangeira** no body que não existe
@@ -162,13 +186,23 @@ incorporada; o relatório os deriva dos asserts):
 | Recurso inexistente                   | `@recurso-inexistente`                        |
 | Obrigatoriedade                       | `@obrigatoriedade`                            |
 | Valores limite                        | `@valor-limite`                               |
+| Payload excessivo                     | `@payload-excessivo`                          |
 | Tipo, formato e enum inválidos        | `@tipo-invalido`                              |
 | Regra de negócio de entrada           | `@regra-negocio`                              |
+| Campo desconhecido                    | `@campo-desconhecido`                         |
+| Mass assignment                       | `@mass-assignment`                            |
 | Entrada estruturalmente inválida      | `@entrada-invalida`                           |
+| Content-Type inválido                 | `@content-type-invalido`                      |
+| Método não permitido                  | `@metodo-nao-permitido`                       |
 | Sem autenticação                      | `@sem-autenticacao`                           |
 | Credencial inválida ou expirada       | `@credencial-invalida`                        |
 | Permissão insuficiente                | `@permissao-insuficiente`                     |
+| Object-level authorization            | `@object-level-authorization`                 |
+| Property-level authorization          | `@property-level-authorization`               |
 | Repetição, duplicidade e idempotência | `@idempotencia`                               |
+| Concorrência                          | `@concorrencia`                               |
+| Rate limit                            | `@rate-limit`                                 |
+| Timeout                               | `@timeout`                                    |
 | Relacionamento inexistente            | `@relacionamento-inexistente`                 |
 | Campo controlado pelo backend         | `@campo-controlado`                           |
 | Contrato da resposta                  | incorporado (schema no cenário)               |
@@ -263,6 +297,7 @@ Exemplos de decisão (quando incorporar vs quando criar `it()` próprio):
 Mesmo sem regra funcional explícita, uma API deve respeitar invariantes mínimas:
 
 - entrada controlável pelo cliente não deve expor erro interno, stack, SQL ou pacote;
+- texto, lista ou body grande não deve derrubar a API nem vazar erro interno;
 - operação rejeitada não deve persistir parcialmente nem corromper estado;
 - repetição de escrita não deve produzir erro bruto ou inconsistência;
 - relacionamento inexistente deve receber tratamento controlado;
@@ -290,7 +325,8 @@ Exemplos de decisão (o que assertar quando **não há** contrato de erro defini
 
 Antes de criar um novo `it()`, responda nesta ordem:
 
-1. **O conceito existe?** Confirme no contrato, backend, documentação ou comportamento real.
+1. **O conceito existe ou pode existir?** Confirme no contrato, backend, documentação, modelo de dados
+   ou sinal simples do domínio.
 2. **Qual risco ou regra ele cobre?** Identifique operação principal, partição, limite, regra de
    negócio, segurança ou robustez.
 3. **Qual é o oráculo?** Defina como distinguir aprovação de falha sem inventar comportamento.
@@ -314,8 +350,14 @@ Classifique o resultado:
 
 - `Aplicavel`: possui justificativa e oráculo; deve seguir para o plano;
 - `Ja coberto`: existe teste adequado; não duplicar;
-- `Nao aplicavel`: o conceito ou risco não existe para o endpoint;
-- `Nao confirmado`: falta evidência; registrar a dúvida e não implementar automaticamente.
+- `Nao aplicavel`: o conceito claramente não existe para o endpoint ou recurso;
+- `Nao confirmado`: o conceito pode fazer sentido, mas falta regra, massa, credencial, perfil,
+  limite, ambiente ou decisão do produto;
+- `Incorporado`: a validação já aparece dentro de outro cenário e não precisa de `it()` próprio.
+
+Regra prática: quando estiver em dúvida entre `Nao aplicavel` e `Nao confirmado`, use
+`Nao confirmado` e explique o que falta em linguagem simples. `Nao aplicavel` exige evidência de que
+o conceito não existe.
 
 Exemplos de classificação (a regra acima é a fonte; estes casos calibram a escolha):
 
@@ -324,5 +366,8 @@ Exemplos de classificação (a regra acima é a fonte; estes casos calibram a es
 | Consultar `GET /{id}` inexistente | Contrato define **404** | **`Aplicavel`** | Conceito e oráculo confirmados; criar o teste |
 | Atualizar registro em estado `ENCERRADO` | Nenhuma fonte diz se bloqueia ou permite | **`Nao confirmado`** | Falta oráculo; não criar teste que aceite/rejeite por suposição |
 | Paginação de recurso sem listagem | Não existe `GET` paginado no backend | **`Nao aplicavel`** | O conceito não existe para este endpoint |
+| Campo `name` sem tamanho máximo | O backend aceita string, mas não declara limite | **`Nao confirmado`** | Falta decisão de tamanho; pode haver risco de erro ou vazamento |
+| Recurso tem `usuarioId`/dono | Não há credencial de outro usuário | **`Nao confirmado`** | Falta usuário de outro dono para testar isolamento |
+| Payload não recebe ids de outros recursos | Body tem apenas campos simples | **`Nao aplicavel`** | Não existe relacionamento para testar |
 | Duplicidade de código com `@Unique` no banco | Restrição existe, mas sem status definido | **`Aplicavel`** como robustez | Tem oráculo controlado (não vazar/não corromper) |
 | Concorrência em atualização | Sem requisito ou histórico de impacto | **`Nao aplicavel`** | Nenhum risco identificado; não inflar a suíte |

@@ -1,12 +1,12 @@
 # Manual de Uso: Skill QA API
 
-Esta skill organiza agentes de testes de API Cypress em um fluxo único, reutilizável e dependente de Graphify.
+Esta skill organiza agentes de testes de API Cypress em um fluxo reutilizável dependente de Graphify.
 
 ## Fluxo oficial
 
 No projeto consumidor:
 
-1. rode o instalador oficial:
+1. Rode o instalador:
 
 ```bash
 npx @marcosquintino/qa-skills install --backend ../backend
@@ -14,173 +14,181 @@ npx @marcosquintino/qa-skills install --backend ../backend
 
 Troque `../backend` pelo caminho relativo correto do backend.
 
-Esse comando copia `qa-api`, `qa-chamado` e `graphify`, instala/valida `graphifyy==0.9.8` e
-configura `qa:reindex` e `qa:reindex:check` quando existir `package.json`.
+Esse comando copia `qa-api`, `qa-chamado`, `qa-debug-report` e `graphify`, instala/valida `graphifyy==0.9.8` e configura
+`qa:reindex`, `qa:reindex:check`, `qa:report`, `qa:debug`, `qa:debug:open` e `qa:debug:generate` quando existir `package.json`.
 
-2. confirme a estrutura:
+2. Peça para a IA preparar a base comum:
 
 ```text
-.agents/skills/
-├── qa-api/
-├── qa-chamado/
-└── graphify/
+Prepare o projeto para testes de API.
+Valide Graphify e o lock do backend, execute os comandos necessários quando possível, corrija lacunas da base comum Cypress/API e deixe o projeto pronto para criar suítes. Não crie suítes de APIs ainda.
 ```
 
-3. rode:
-
-```bash
-npm run qa:reindex
-```
-
-4. peça para a IA:
+3. Depois peça para criar uma suíte:
 
 ```text
 Crie testes para a API <nome-da-api>.
+Antes de implementar, monte a matriz endpoint x cenário para todas as rotas da API. Não deixe cenário aplicável sem teste ou justificativa.
 ```
 
-O usuário não cria `.yml`. O `qa:reindex` cria automaticamente `.qa-api/backend-graph.lock.json`.
+O usuário não cria `.yml`. No fluxo normal, a IA deve executar `qa:reindex` e `qa:reindex:check`
+quando preparar o projeto, e `qa:report` quando finalizar criação ou revisão de suíte. Ação manual só
+entra quando a IA não puder executar comandos, quando faltar caminho do backend ou quando o ambiente
+externo falhar.
 
-### Fluxo manual
+## Fluxo manual
 
-Se o ambiente não puder usar o instalador npm, copie manualmente:
+Use somente quando o ambiente não puder usar o instalador ou quando a IA pedir uma ação manual.
+
+Estrutura esperada:
 
 ```text
 .agents/skills/
-├── qa-api/
-├── qa-chamado/
-└── graphify/
+- qa-api/
+- qa-chamado/
+- qa-debug-report/
+- graphify/
 ```
 
-Depois instale a versão travada do Graphify CLI:
+Instale a versão travada do Graphify:
 
 ```bash
 uv tool install graphifyy==0.9.8
 ```
 
-Valide:
+Alternativas:
 
 ```bash
-node .agents/skills/graphify/tools/graphify-runner.mjs --check
+pipx install graphifyy==0.9.8
+pip install graphifyy==0.9.8
 ```
 
-Configure no `package.json`:
+Configure scripts no `package.json`:
 
 ```json
 {
   "scripts": {
     "qa:reindex": "node .agents/skills/qa-api/tools/qa-reindex.mjs --backend ../backend",
-    "qa:reindex:check": "node .agents/skills/qa-api/tools/qa-reindex.mjs --check"
+    "qa:reindex:check": "node .agents/skills/qa-api/tools/qa-reindex.mjs --check",
+    "qa:report": "node .agents/skills/qa-api/tools/qa-report.mjs",
+    "qa:debug": "node .agents/skills/qa-debug-report/tools/qa-debug-report.mjs run",
+    "qa:debug:open": "node .agents/skills/qa-debug-report/tools/qa-debug-report.mjs open",
+    "qa:debug:generate": "node .agents/skills/qa-debug-report/tools/qa-debug-report.mjs generate"
   }
 }
 ```
 
-## O que o reindex deve gerar
+## Artefatos do reindex
 
-- `graphify-out/graph.json`
-- `graphify-out/GRAPH_REPORT.md`, quando disponível
-- `.qa-api/backend-graph.lock.json`
+Obrigatórios para criação/refatoração:
 
-Se algum desses arquivos obrigatórios estiver ausente ou desatualizado, a skill deve parar e pedir `npm run qa:reindex`.
+- `.agents/state/qa-api/graphify-out/graph.json`
+- `.agents/state/qa-api/backend-graph.lock.json`
 
-## Prompts de uso
+Complementares:
+
+- `.agents/state/qa-api/graphify-out/GRAPH_REPORT.md`, quando disponível
+- `.agents/state/qa-api/graphify-out/graph.html`, mapa visual humano
+
+`graph.html` não bloqueia testes. `graph.json` continua sendo o mapa usado pela IA.
+
+## Relatório oficial dos testes
+
+Depois de criar ou revisar uma suíte, a IA deve gerar o relatório oficial quando possível:
+
+```bash
+npm run qa:report -- --api <nome-da-api>
+```
+
+Também é possível apontar uma pasta específica:
+
+```bash
+npm run qa:report -- --dir cypress/e2e/apis/<nome-da-api>
+```
+
+Saídas:
 
 ```text
-Prepare o projeto para testes de API.
-Crie testes para a API empresa.
-Refatore os testes da API empresa.
-Revise os testes da API empresa.
-Analise o report da API empresa.
+.agents/state/qa-api/reports/<api>/coverage.html
+.agents/state/qa-api/reports/<api>/coverage.json
+```
+
+`coverage.html` é a visão humana. `coverage.json` é a fonte estruturada para revisão posterior pela
+IA. O relatório não executa Cypress; ele audita JSDoc, tags `CatalogoTags`, vínculos `@regra:<id>` e
+declarações `@cobertura` nos specs gerados.
+
+O `coverage.json` também inclui `coverageByEndpoint`, `catalogAssessment`, `logicalCases` para
+testes data-driven e `aiNextActions`. Esses campos ajudam a IA a continuar o trabalho depois que o QA
+der mais contexto.
+
+## Relatório manual de debug
+
+Quando o QA quiser investigar uma falha real de execução Cypress, use a skill irmã `qa-debug-report`:
+
+```bash
+npm run qa:debug -- --spec "cypress/e2e/apis/users/**/*.cy.js"
+npm run qa:debug -- --open --spec "cypress/e2e/apis/users/**/*.cy.js"
+npm run qa:debug:open
+```
+
+Saídas padrão:
+
+```text
+reports/faillens/index.html
+reports/faillens/faillens-report.json
+```
+
+`qa:debug` executa Cypress com instrumentação temporária do FailLens e gera evidências para debug,
+reprodução e chamados. Ele não deve rodar automaticamente ao criar ou revisar suítes. Use somente
+quando o usuário pedir execução/debug ou autorizar claramente.
+
+Os status de `@cobertura` devem ser simples:
+
+- `aplicavel`: precisa de teste.
+- `nao-confirmado`: pode fazer sentido, mas falta contexto.
+- `incorporado`: já foi validado dentro de outro teste.
+- `nao-aplicavel`: o conceito claramente não existe nesta API.
+
+Prefira explicações curtas para QA, como:
+
+```text
+@cobertura @valor-limite nao-confirmado - o backend não informa tamanho máximo para name/email
 ```
 
 ## Agentes internos
 
 | Arquivo | Uso |
 | --- | --- |
-| `agents/api-preparador.md` | Auditar e preparar a base compartilhada Cypress. |
-| `agents/backend-index.md` | Validar o uso obrigatório de Graphify e orientar o reindex. |
+| `agents/api-preparador.md` | Preparar a base compartilhada Cypress/API. |
+| `agents/backend-index.md` | Validar Graphify, lock e reindex. |
 | `agents/api-criador.md` | Criar ou refatorar a suíte completa de uma API. |
 | `agents/api-revisor.md` | Revisar uma suíte existente e identificar lacunas. |
-| `agents/api-analisador.md` | Analisar `report.json` e entregar problemas numerados para possível uso pela skill `qa-chamado`. |
+| `agents/api-analisador.md` | Analisar `report.json`/FailLens e entregar problemas numerados. |
 
 ## Templates sob demanda
 
-`templates/api-templates.md` e apenas o indice dos templates tecnicos. Use-o para escolher os
-arquivos certos e evitar carregar exemplos que nao pertencem ao cenario atual.
-
-| Cenario | Template |
-| --- | --- |
-| Camada comum, cliente HTTP, log mascarado e config base | `templates/cypress-base.md` |
-| Login, token, sem autenticacao, permissao e seguranca | `templates/autenticacao.md` |
-| AJV e schemas de resposta/erro | `templates/schemas.md` |
-| Asserts genericos e asserts do recurso | `templates/asserts.md` |
-| Contrato de erro, vazamento interno e mensagens | `templates/erros.md` |
-| Payloads, massa de dados, hooks e cleanup | `templates/fixtures.md` |
-| Cliente do recurso, CRUD, persistencia e listagem | `templates/crud.md` |
-| Obrigatoriedade, limites, tipos e validacoes data-driven | `templates/validacoes.md` |
+`templates/api-templates.md` é o índice. Use-o para escolher arquivos certos e evitar carregar
+exemplos irrelevantes.
 
 ## Regra do Graphify
 
 Graphify é obrigatório no fluxo oficial.
 
-Use `graphify-out/graph.json` como mapa estrutural para localizar controller, router, DTO, service, repository, handler, validações, exceptions e middlewares.
+Use `graph.json` como mapa estrutural para localizar controller, router, DTO, service, repository,
+handler, validações, exceptions e middlewares. Use o lock para descobrir o backend root usado no
+reindex.
 
-Use `.qa-api/backend-graph.lock.json` para descobrir o backend root usado no reindex.
+Graphify não é contrato final. Depois de encontrar arquivos candidatos, abra o código real do
+backend antes de definir payload, campos, obrigatoriedade, tipos, nulabilidade, status, mensagens,
+regras de negócio, persistência, segurança e formato de erro.
 
-Graphify não é contrato final. Depois de encontrar os arquivos candidatos, sempre abra o código real do backend antes de definir payload, campos, obrigatoriedade, tipos, nulabilidade, status, mensagens, regras de negócio, persistência, segurança e formato de erro.
+## Configuração por plataforma de IA
 
-Não faça descoberta manual como substituto quando o grafo estiver ausente. Nesse caso, pare e peça:
+O Graphify oficial possui comandos opcionais por plataforma, como Codex, Cursor, Claude e Agent
+Skills. Eles criam arquivos de suporte para consultas gerais ao grafo, mas não são obrigatórios para
+criar testes com `qa-api` e não substituem `qa:reindex`.
 
-```bash
-npm run qa:reindex
-```
-
-## Instalação do Graphify
-
-No fluxo recomendado, o instalador npm instala ou valida Graphify:
-
-```bash
-npx @marcosquintino/qa-skills install
-```
-
-Se a instalação for manual ou se a validação da skill `graphify` falhar, instale explicitamente a
-versão travada:
-
-```bash
-uv tool install graphifyy==0.9.8
-```
-
-ou:
-
-```bash
-pipx install graphifyy==0.9.8
-```
-
-ou:
-
-```bash
-pip install graphifyy==0.9.8
-```
-
-O pacote Python é `graphifyy`, mas o comando exposto no terminal é `graphify`.
-
-## Graphify Skill
-
-Graphify CLI é obrigatório. Graphify Skill também é obrigatória porque guarda a versão travada.
-
-Graphify deve ficar ao lado da `qa-api`:
-
-```text
-.agents/skills/
-├── qa-api/
-├── qa-chamado/
-└── graphify/
-```
-
-Não copie Graphify para dentro de `qa-api`.
-
-O Graphify oficial também possui comandos opcionais de configuração por plataforma de IA, como Codex, Cursor, Claude e Agent Skills. Esses comandos não são obrigatórios para criar testes com `qa-api`; eles servem para fazer a IA consultar o grafo de forma mais automática em perguntas gerais sobre o projeto.
-
-Para saber mais sobre esses tipos de configuração, consulte o README da skill Graphify deste projeto:
+Consulte também:
 
 ```text
 .agents/skills/graphify/README.md
@@ -190,9 +198,12 @@ Para saber mais sobre esses tipos de configuração, consulte o README da skill 
 
 - Não invente contrato.
 - Não crie teste sem oráculo confiável.
-- Não instale dependências sem autorização.
-- Não altere `package.json` sem autorização.
+- Durante o preparo, pode instalar dependências de teste, alterar `package.json` e criar a base comum.
+- Fora do preparo, não instale dependências nem altere `package.json` sem autorização.
+- Não execute `qa:debug` automaticamente; ele é manual para falhas reais de execução.
 - Não altere autenticação, schemas compartilhados ou configurações sensíveis sem autorização.
+- Não crie ferramentas legadas como `cy:log`, `relatorio-cobertura` ou `relatorio-execucao`; use
+  `qa:report` para o relatório oficial da skill.
 - Não exponha tokens, cookies, senhas ou Authorization em logs, reports, cURL ou chamados.
 - Não mascare defeito para fazer teste passar.
-- Não crie `mapeamento-api.md` ou `mapeamento-api.json` no novo fluxo.
+- Não crie `mapeamento-api.md` ou `mapeamento-api.json`.

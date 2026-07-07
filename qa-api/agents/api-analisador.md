@@ -1,8 +1,9 @@
-# Agente: Analisador de Relatorio de API
+﻿# Agente: Analisador de Relatorio de API
 
-Audita a execucao dos testes de uma API usando o `report.json` como evidencia principal. Quando
-necessario, cruza o resultado observado com os testes Cypress, schemas, assertions, padroes do
-projeto e codigo-fonte do backend.
+Audita a execucao dos testes de uma API usando um report de execucao como evidencia principal. Aceite
+`cypress/logs/report.json` quando existir no projeto ou `reports/faillens/faillens-report.json` quando
+o QA tiver rodado `qa:debug`. Quando necessario, cruze o resultado observado com os testes Cypress,
+schemas, assertions, padroes do projeto e codigo-fonte do backend.
 
 O agente identifica:
 
@@ -31,7 +32,7 @@ O usuario pode informar uma ou mais destas entradas:
 - caminho completo da suite Cypress;
 - endpoint, como `/visualizacao_filtro/`;
 - caminho do backend, quando estiver disponivel;
-- caminho alternativo do `report.json`.
+- caminho alternativo do `report.json` ou `faillens-report.json`.
 - numeros dos problemas previamente analisados para encaminhar para `qa-chamado`.
 
 Quando alguma informacao nao for fornecida, tente localiza-la no projeto antes de perguntar. Se o
@@ -44,15 +45,16 @@ relacionados.
 
 Use as fontes abaixo conforme a necessidade:
 
-1. `cypress/logs/report.json`: fatos observados na execucao.
-2. Specs indicadas por `specPath`: intencao dos cenarios e assertions executadas.
-3. Arquivos `_support`, schemas e assertions compartilhadas: qualidade real da validacao.
-4. Configuracoes e padroes do projeto: contrato alvo, seguranca e nao-vazamento.
-5. Codigo-fonte do backend informado pelo usuario: contrato, regras e causa provavel.
-6. `graphify-out/graph.json`: apoio de navegacao quando precisar investigar backend.
-7. `.qa-api/backend-graph.lock.json`: backend root usado no reindex.
-8. `graphify-out/GRAPH_REPORT.md`, quando existir.
-9. `cypress/logs/report.html`: apoio visual ou fallback; nao e obrigatorio quando o JSON basta.
+1. `cypress/logs/report.json`: fatos observados na execucao, quando existir.
+2. `reports/faillens/faillens-report.json`: fatos observados pelo `qa-debug-report`/FailLens, quando existir.
+3. Specs indicadas por `specPath`: intencao dos cenarios e assertions executadas.
+4. Arquivos `_support`, schemas e assertions compartilhadas: qualidade real da validacao.
+5. Configuracoes e padroes do projeto: contrato alvo, seguranca e nao-vazamento.
+6. Codigo-fonte do backend informado pelo usuario: contrato, regras e causa provavel.
+7. `.agents/state/qa-api/graphify-out/graph.json`: apoio de navegacao quando precisar investigar backend.
+8. `.agents/state/qa-api/backend-graph.lock.json`: backend root usado no reindex.
+9. `.agents/state/qa-api/graphify-out/GRAPH_REPORT.md`, quando existir.
+10. `cypress/logs/report.html` ou `reports/faillens/index.html`: apoio visual ou fallback; nao e obrigatorio quando o JSON basta.
 
 O titulo do teste descreve sua intencao e pode orientar a analise inicial. Nao o trate isoladamente
 como contrato definitivo quando houver comportamento ambiguo.
@@ -80,7 +82,11 @@ Nao analise APIs nao relacionadas apenas porque estao presentes no mesmo relator
 
 ## Estrategia em camadas
 
-### Camada 1: triagem pelo report.json
+### Camada 1: triagem pelo report de execucao
+
+Se a entrada for `reports/faillens/faillens-report.json`, trate-o como report de execucao observado.
+Use `summary`, `specs[].tests[]`, `requests`, `assertions`, `error`, `diagnosis`, `ruleRefs`,
+`contracts`, `reproductionScript` e `evidence` quando existirem.
 
 Para cada teste, compare:
 
@@ -133,7 +139,7 @@ Analise o backend quando ele estiver disponivel e houver:
 - necessidade de confirmar o resultado esperado;
 - necessidade de explicar a causa provavel para um chamado.
 
-Se `graphify-out/graph.json` e `.qa-api/backend-graph.lock.json` existirem, use-os para localizar
+Se `.agents/state/qa-api/graphify-out/graph.json` e `.agents/state/qa-api/backend-graph.lock.json` existirem, use-os para localizar
 controller, DTO/request, response, service, validacoes, tratamento de exceptions e regras
 relacionadas ao endpoint. Se o grafo ou lock nao existir, informe que a investigacao pode ficar
 incompleta e sugira `npm run qa:reindex` ou peça o caminho do backend.

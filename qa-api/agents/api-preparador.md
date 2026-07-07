@@ -1,403 +1,224 @@
-# Agente: Setup Seguro de Testes de API (Cypress)
+# Agente: Preparador de Base QA API (Cypress)
 
-Prepara o projeto de automação para receber testes de API no padrão de qualidade definido em `api-pattern.md`.
+Prepara o projeto consumidor para receber suítes oficiais de testes de API no padrão definido em
+`api-pattern.md`.
 
-Este agente **não cria testes de endpoint**. Ele audita e prepara a base comum: dependências,
-estrutura, helpers compartilhados, schemas de erro, perfil do produto, script `qa:reindex` e pré-requisitos do Graphify.
+Este agente não cria testes de endpoint. Ele valida o ambiente, corrige lacunas da base comum e deixa
+o projeto pronto para o `api-criador.md`.
 
----
+## Contrato
 
-## Objetivo
-
-Depois deste setup, o `api-criador.md` deve conseguir criar uma suíte de API sem precisar que o
-usuário lembre manualmente de `config.js`, `auth.api.js`, schemas de erro ou asserts base.
-
-Fluxo esperado:
+Quando o usuário pedir para preparar o projeto, interprete como:
 
 ```text
-1. Rode este setup no projeto de automação.
-2. Corrija/aprove as pendências que ele reportar.
-3. Depois use api-criador.md para criar/refatorar testes de uma API.
+validar + configurar + criar base comum ausente + executar validações possíveis + deixar pronto para criar suítes
 ```
 
----
+Não entregue apenas auditoria quando as lacunas estiverem dentro do escopo autorizado. Corrija-as.
+Se o usuário pedir explicitamente apenas "audite", "verifique" ou "não altere", então não implemente.
 
-## Regra principal: auditar antes de alterar
+## Escopo autorizado no preparo
 
-Antes de criar ou mexer em qualquer arquivo:
+Pode fazer sem nova confirmação:
 
-1. Verifique se ele já existe.
-2. Se existe, leia e classifique:
-   - **OK no padrão**: não altere.
-   - **Existe, mas fora do padrão**: reporte o que está diferente e peça autorização antes de refatorar.
-   - **Existe em outro caminho/nome**: reporte e proponha reaproveitar, mover ou criar adapter.
-   - **Não existe**: proponha criação.
-3. Nunca sobrescreva arquivo existente sem autorização explícita.
+- instalar dependências de teste faltantes;
+- alterar `package.json` para dependências e scripts de base;
+- criar scripts `qa:reindex` e `qa:reindex:check` quando ausentes e quando o backend estiver claro;
+- criar ou ajustar `cypress.config.*` somente no necessário;
+- criar `.prettierrc.json` e `eslint.config.*` quando ausentes;
+- criar scripts `lint` e `lint:fix` quando ausentes;
+- criar a base comum em `cypress/support/api/*`;
+- criar assertions compartilhadas em `cypress/support/assertions/*`;
+- criar schemas de erro em `cypress/fixtures/schemas/*`.
 
----
+Não crie suítes específicas como `users.cy.js`, `products.cy.js` ou `orders.cy.js`.
 
-## Arquivos que o setup deve auditar
+## Fora do escopo atual
 
-| Arquivo                                               | Ação se não existir                                            | Ação se existir fora do padrão                      |
-| ----------------------------------------------------- | -------------------------------------------------------------- | --------------------------------------------------- |
-| `package.json`                                        | Avisar que o projeto pode não ser Node/Cypress.                | Não reescrever; só reportar scripts/deps faltantes. |
-| `graphify-out/graph.json`                             | Pedir `npm run qa:reindex`.                                    | Pedir `npm run qa:reindex` se parecer desatualizado. |
-| `.qa-api/backend-graph.lock.json`                     | Pedir `npm run qa:reindex`.                                    | Validar frescor quando possível.                    |
-| `.prettierrc.json`                                    | Pode propor criação.                                           | Não sobrescrever; reportar diferença.               |
-| `eslint.config.*` ou `.eslintrc*`                     | Pode propor configuração compatível após auditar a estrutura.  | Não sobrescrever; reportar regras e escopo.         |
-| `cypress/support/api/config.js`                       | Pode propor criação após entender o produto.                   | Reportar lacunas; refatorar só com OK.              |
-| `cypress/support/api/auth.api.js`                     | **Perguntar antes de criar.**                                  | **Perguntar antes de refatorar.**                   |
-| `cypress/support/api/client.js`                       | Pode propor criação.                                           | Reportar diferenças; refatorar só com OK.           |
-| `cypress/support/api/schema.js`                       | Pode propor criação.                                           | Reportar diferenças; refatorar só com OK.           |
-| `cypress/support/api/asserts.base.js`                 | Pode propor criação.                                           | Reportar diferenças; refatorar só com OK.           |
-| `cypress/support/assertions/error.assertions.js`      | Pode propor criação.                                           | Reportar diferenças; refatorar só com OK.           |
-| `cypress/support/assertions/pagination.assertions.js` | Pode propor criação se o produto pagina.                       | Reportar diferenças; refatorar só com OK.           |
-| `cypress/fixtures/schemas/erro.schema.json`           | Pode propor criação depois de descobrir contrato de erro.      | Reportar divergências; alterar só com OK.           |
-| `cypress/fixtures/schemas/erro-validacao.schema.json` | Pode propor criação depois de descobrir contrato de validação. | Reportar divergências; alterar só com OK.           |
+Não cobre nem trate como lacuna bloqueante:
 
-`auth.api.js` é sensível porque envolve login, token, headers, tenant/cliente e credenciais. Se não
-existir ou estiver fora do padrão, **sempre pare e peça autorização antes de criar/refatorar**.
+- `tools/relatorio-cobertura`;
+- `tools/relatorio-execucao`;
+- scripts `cy:log`, `relatorio-cobertura` ou similares;
+- wiring de tasks `apiLog:*`;
+- geração legada de `report.json` ou `report.html`.
 
----
+Essas ferramentas legadas não bloqueiam o preparo. Se existirem, preserve. Se não existirem, ignore.
+O relatório oficial estático da skill é `qa:report` e já vem do instalador.
 
-## Dependências do padrão
+## O que ainda exige confirmação
 
-| Pacote                  | Para quê                                        | Verificar em      |
-| ----------------------- | ----------------------------------------------- | ----------------- |
-| `cypress`               | rodar os testes                                 | `devDependencies` |
-| `ajv`                   | validar respostas por JSON Schema               | `devDependencies` |
-| `@faker-js/faker`       | gerar massa de dados única                      | `devDependencies` |
-| `prettier`              | formatação única do código                      | `devDependencies` |
-| `eslint`                | detectar problemas estáticos no JavaScript      | `devDependencies` |
-| `eslint-plugin-cypress` | detectar práticas inseguras ou frágeis Cypress  | `devDependencies` |
-| `@eslint/js`            | aplicar regras recomendadas, se usado na config | `devDependencies` |
-| `globals`               | declarar ambientes, se usado na config          | `devDependencies` |
-| `acorn`                 | parser estático usado pelo `tools/relatorio-cobertura` (declare explicitamente; não confie na resolução transitiva via eslint) | `devDependencies` |
+Pare e peça confirmação antes de:
 
-Se faltar dependência, **pergunte antes de instalar**:
+- alterar backend;
+- alterar autenticação real do produto;
+- alterar secrets, `.env`, credenciais, tokens ou dados sensíveis;
+- remover testes existentes;
+- trocar framework de testes;
+- mexer em pipeline/CI;
+- refatorar arquivo existente fora do padrão quando a mudança for grande ou ambígua;
+- alterar schemas de erro existentes quando isso puder quebrar suítes atuais;
+- criar ferramentas de relatório.
+- criar ferramentas de relatório fora do `qa:report` oficial.
 
-```bash
-npm install -D <pacotes-que-faltam>
-```
+Regra prática: arquivo ausente da base comum pode ser criado; arquivo existente deve ser lido e
+preservado quando já cumpre a responsabilidade.
 
-Antes de propor versões, descubra a versão do Node, o gerenciador de pacotes e a configuração ESLint
-existente. Instale versões compatíveis com o projeto; não force a versão mais recente nem migre
-`.eslintrc*` para flat config sem autorização.
+## Fase 1 - Validar pré-requisitos
 
-Graphify é obrigatório para o fluxo oficial de criação de testes de API, mas não é instalado
-automaticamente por este agente. Verifique se a skill irmã `graphify` existe, se
-`graphify/manifest.json` está disponível e se `node .agents/skills/graphify/tools/graphify-runner.mjs --check`
-passa. Se faltar, registre a pendência e aponte para `docs/graphify.md`.
-
----
-
-## Travas de lint do padrão
-
-Além das regras recomendadas do ESLint e do `eslint-plugin-cypress`, o setup deve garantir que a
-configuração contenha as **travas determinísticas** que barram anti-padrões do `api-pattern.md`.
-Elas existem para que regras de higiene não dependam de revisão manual nem da auto-avaliação do
-agente: o que pode ser verificado por máquina não deve ficar a cargo do modelo.
-
-Travas mínimas (subconjunto mecânico das seções 7, 10 e 13 do `api-pattern.md`):
-
-| Trava                                            | Onde se aplica                  | Por quê                                                          |
-| ------------------------------------------------ | ------------------------------- | ---------------------------------------------------------------- |
-| Sem `cy.request` direto                          | specs `*.cy.js`                 | request deve passar por `_support/api.js`, não pelo spec         |
-| Sem `cy.log(JSON.stringify(...))`                | specs `*.cy.js`                 | o log fica no client/`apiRequest`, não solto no teste            |
-| Sem `it.only` / `describe.only` / `context.only` | specs `*.cy.js`                 | evita subir teste focado por engano                              |
-| Sem `expect`                                     | `_support/api.js`, `payload.js` | esses arquivos não contêm assertions (regra vai em `asserts.js`) |
-| Sem import de `faker`                            | `_support/api.js`               | massa de dados pertence a `payload.js`, não ao request           |
-| Sem escape Unicode desnecessário                 | código novo de APIs             | mantém textos acentuados legíveis diretamente em UTF-8           |
-| Request seguro                                   | `support/api/requestLogger.*`   | `cy.request` usa `log:false` e report/cURL não vazam credenciais |
-
-Implementação (flat config, ESLint 9+). Ao portar para outro projeto, ajuste **apenas os globs de
-arquivo**; a intenção das regras é a mesma:
-
-```js
-// Specs: sem cy.request direto, sem cy.log(JSON.stringify), sem .only.
-{
-  files: ["cypress/e2e/**/*.cy.js"],
-  rules: {
-    "no-restricted-syntax": [
-      "error",
-      {
-        selector: "CallExpression[callee.object.name='cy'][callee.property.name='request']",
-        message: "Nao use cy.request direto no spec; chame via _support/api.js (pattern secao 13).",
-      },
-      {
-        selector:
-          "CallExpression[callee.object.name='cy'][callee.property.name='log'] CallExpression[callee.object.name='JSON'][callee.property.name='stringify']",
-        message: "Nao use cy.log(JSON.stringify(...)) (pattern secao 13).",
-      },
-      {
-        selector: "Literal[raw=/\\\\u[0-9a-fA-F]{4}/]",
-        message: "Escreva caracteres acentuados diretamente em UTF-8, sem escapes Unicode.",
-      },
-      {
-        selector: "TemplateElement[value.raw=/\\\\u[0-9a-fA-F]{4}/]",
-        message: "Escreva caracteres acentuados diretamente em UTF-8, sem escapes Unicode.",
-      },
-    ],
-    "no-restricted-properties": [
-      "error",
-      { object: "it", property: "only", message: "Remova .only antes de commitar." },
-      { object: "describe", property: "only", message: "Remova .only antes de commitar." },
-      { object: "context", property: "only", message: "Remova .only antes de commitar." },
-    ],
-  },
-},
-// api.js e payload.js nao contem assertions (pattern/06-organizacao-codigo.md).
-// Suporte global: arquivos de request/config (nao de assertion) — espelho do api.js/payload.js per-API.
-{
-  files: [
-    "cypress/e2e/**/_support/api.js",
-    "cypress/e2e/**/_support/payload.js",
-    "cypress/support/api/client.js",
-    "cypress/support/api/config.js",
-  ],
-  rules: {
-    "no-restricted-syntax": [
-      "error",
-      {
-        selector: "CallExpression[callee.name='expect']",
-        message: "api.js/payload.js/client.js/config.js nao contem assertions; use _support/asserts.js (pattern/06-organizacao-codigo.md).",
-      },
-    ],
-  },
-},
-// api.js so faz chamada HTTP: faker pertence a payload.js (pattern/06-organizacao-codigo.md).
-// Suporte global inteiro: massa (faker) pertence ao payload.js per-API, nao ao support global.
-{
-  files: ["cypress/e2e/**/_support/api.js", "cypress/support/api/*.js"],
-  rules: {
-    "no-restricted-imports": [
-      "error",
-      {
-        patterns: [
-          {
-            group: ["@faker-js/faker", "*faker*"],
-            message: "Massa (faker) pertence a payload.js, nao a api.js (pattern/06-organizacao-codigo.md).",
-          },
-        ],
-      },
-    ],
-  },
-},
-// Textos de negocio usam UTF-8 legivel; escapes tecnicos em regex continuam permitidos.
-{
-  files: ["cypress/e2e/apis/**/_support/**/*.js"],
-  rules: {
-    "no-restricted-syntax": [
-      "error",
-      {
-        selector: "Literal[raw=/\\\\u[0-9a-fA-F]{4}/]",
-        message: "Escreva caracteres acentuados diretamente em UTF-8, sem escapes Unicode.",
-      },
-      {
-        selector: "TemplateElement[value.raw=/\\\\u[0-9a-fA-F]{4}/]",
-        message: "Escreva caracteres acentuados diretamente em UTF-8, sem escapes Unicode.",
-      },
-    ],
-  },
-},
-```
-
-Regras importantes para o setup:
-
-- as travas **complementam** o `eslint-plugin-cypress` (que já barra `cy.wait` fixo e atribuição do
-  retorno de comandos `cy`), não o substituem;
-- elas cobrem apenas a parte **mecânica**; oráculo, cobertura, documentação viva, rastreabilidade
-  título e assertion, comentários de fase com intenção, ausência de `return` desnecessário, asserts
-  compostos por objeto nomeado, valores/mensagens nomeados e profundidade de aninhamento por fase
-  continuam sendo verificados pelo `api-revisor.md`;
-- **não** adicione uma trava dura de aninhamento (ex.: `max-nested-callbacks: 3`): testes legítimos
-  encadeiam setup + autenticação + ação + verificação e ultrapassam três níveis de callback sem
-  estarem "fazendo coisa demais". O limite é por **fase lógica** (Preparação → Ação → Validação) e é
-  julgamento de revisão, não regra de máquina. Se quiser um guarda-corpo contra aninhamento extremo,
-  use um limite folgado (5+), nunca 3;
-- a trava de encoding deve rejeitar escapes como `\u00e7` em textos de negócio, mas preservar usos
-  técnicos legítimos, como intervalos Unicode em expressões regulares;
-- o wrapper central de requests deve usar `cy.request` com `log: false` e mascarar dados sensíveis
-  antes de gravar no runner, `report.json`, `report.html` ou cURL;
-- campos como `Authorization`, `Cookie`, `password`, `accessToken`, `refreshToken` e `token` nunca
-  devem aparecer com valor real em artefatos de teste;
-- se o projeto usa `.eslintrc*` legado em vez de flat config, traduza a intenção das regras sem
-  migrar o formato sem autorização;
-- não desative essas travas nem ignore caminhos novos só para deixar o lint verde; uma violação real
-  indica anti-padrão a corrigir.
-
----
-
-## Como descobrir o perfil do produto
-
-Use `api-perfil.template.md` como checklist interno. O usuário não precisa citar esse
-arquivo no prompt.
-
-Procure no projeto atual:
-
-- script `qa:reindex` em `package.json`;
-- script `qa:reindex:check` em `package.json`;
-- `qa-api/tools/qa-reindex.mjs` na instalação da skill;
-- `graphify/manifest.json` na skill irmã;
-- `graphify-out/graph.json`;
-- `graphify-out/GRAPH_REPORT.md`, quando existir;
-- `.qa-api/backend-graph.lock.json`;
-- `cypress.env.json`, `.env`, variáveis usadas no CI e `cypress.config.js`;
-- clientes HTTP existentes;
-- helpers de login existentes;
-- schemas existentes;
-- specs antigas que mostram formato de sucesso/erro;
-- documentação local, Swagger/OpenAPI, Postman/Insomnia se houver.
-
-Se o usuário também informar a pasta do backend, use somente leitura para descobrir:
-
-- formato de erro global;
-- mensagens e exceptions;
-- autenticação/autorização;
-- status esperado para request sem token e token inválido/malformado;
-- existência de usuário sem permissão, perfil somente leitura ou isolamento por tenant/cliente;
-- paginação;
-- padrões de vazamento da stack.
-
-Se não conseguir descobrir algo com segurança, reporte como pergunta pendente. Não invente. Para
-segurança, diferencie: sem token e token inválido são cobertura corporativa de endpoint protegido;
-permissão insuficiente depende de massa/credencial sem permissão e deve virar lacuna documentada
-quando essa massa não existir.
-
-Após descobrir o perfil do produto, se o backend estiver disponível, confirme que o projeto possui
-Graphify configurado e que existe o comando determinístico `npm run qa:reindex`. O reindex deve
-chamar `qa-api/tools/qa-reindex.mjs` com `--backend <caminho-do-backend>` e gerar
-`graphify-out/graph.json` e `.qa-api/backend-graph.lock.json`. A criação de testes oficiais depende
-desse grafo.
-
-Se o script `qa:reindex` não existir, proponha adicionar ao `package.json` do projeto consumidor:
-
-```json
-{
-  "scripts": {
-    "qa:reindex": "node .agents/skills/qa-api/tools/qa-reindex.mjs --backend ../backend",
-    "qa:reindex:check": "node .agents/skills/qa-api/tools/qa-reindex.mjs --check"
-  }
-}
-```
-
-Peça autorização antes de alterar `package.json`. Se não souber o caminho do backend, não invente:
-diga que o usuário precisa substituir `../backend` pelo caminho relativo correto.
+1. Confirme que o projeto tem `package.json`.
+2. Confirme que existem as skills irmãs:
+   - `.agents/skills/qa-api`;
+   - `.agents/skills/graphify`;
+   - `.agents/skills/qa-chamado`, quando instalada.
+3. Verifique `qa:reindex` e `qa:reindex:check`.
+4. Se os scripts não existirem e o caminho do backend estiver claro pelo pedido do usuário, pelo lock
+   existente ou pelo padrão instalado, adicione-os ao `package.json`.
+5. Se o caminho do backend não puder ser inferido, pare e solicite esse caminho.
+6. Execute `npm run qa:reindex:check` quando possível.
+7. Se o check falhar por grafo/lock ausente ou desatualizado, execute `npm run qa:reindex` quando possível.
+8. Se Graphify ou a versão travada falhar por problema externo, registre a falha e oriente a instalação
+   pela skill `graphify`.
+9. Leia `.agents/state/qa-api/backend-graph.lock.json` e use `backendRoot` ou `backendRootAbsolute`
+   para localizar o backend.
 
 Não crie `mapeamento-api.md` nem `mapeamento-api.json`.
 
----
+## Fase 2 - Descobrir perfil mínimo do produto
 
-## Procedimento
+Use Graphify como mapa e confirme no código real do backend:
 
-### 1. Auditoria inicial
+- base URL esperada para os testes;
+- formato de login/token;
+- headers autenticados;
+- status para sem token e token inválido;
+- formato de erro padrão;
+- formato de erro de validação;
+- sinais de vazamento interno a bloquear;
+- formato de paginação, se existir.
 
-Entregue uma tabela:
+Se algo não puder ser descoberto com segurança, use um default conservador e registre como lacuna na
+saída final. Não invente regra de negócio específica de endpoint.
 
-| Item            | Status                     | Ação proposta           |
-| --------------- | -------------------------- | ----------------------- |
-| Dependências    | OK/faltando                | instalar X              |
-| `config.js`     | OK/faltando/fora do padrão | criar/ajustar/não mexer |
-| `auth.api.js`   | OK/faltando/fora do padrão | pedir autorização       |
-| Schemas de erro | OK/faltando/fora do padrão | criar/ajustar           |
-| Asserts base    | OK/faltando/fora do padrão | criar/ajustar           |
-| Segurança       | OK/lacuna                  | status sem token/token inválido e usuário sem permissão |
-| Ferramentas de relatório | OK/faltando/fora do padrão | se faltarem, pedir ao usuário inserir (passo manual); verificar wiring e scripts |
-| `qa:reindex` | OK/faltando | pedir autorização antes de alterar `package.json` |
-| `qa:reindex:check` | OK/faltando | pedir autorização antes de alterar `package.json` |
-| `qa-api/tools/qa-reindex.mjs` | OK/faltando | orientar instalação/cópia correta da skill |
-| Graphify skill | OK/faltando | instalar/copiar como skill irmã, não dentro de `qa-api` |
-| Graphify CLI | OK/não encontrado/versão incompatível | não instalar automaticamente; registrar versão travada |
-| `graphify-out/graph.json` | OK/faltando/desatualizado | pedir `npm run qa:reindex` |
-| `.qa-api/backend-graph.lock.json` | OK/faltando/desatualizado | pedir `npm run qa:reindex` |
+## Fase 3 - Dependências
 
-Pare no relatório se houver qualquer criação/refatoração sensível.
+Garanta as dependências de base no `devDependencies`:
 
-### 2. Plano de alterações
+| Pacote | Uso |
+| --- | --- |
+| `cypress` | executar testes |
+| `ajv` | validar JSON Schema |
+| `@faker-js/faker` | gerar massa única |
+| `prettier` | formatação |
+| `eslint` | lint |
+| `eslint-plugin-cypress` | regras Cypress |
+| `@eslint/js` | preset recomendado, se usar flat config |
+| `globals` | ambientes globais, se usar flat config |
 
-Liste exatamente:
+Use o gerenciador já presente:
 
-- arquivos que serão criados;
-- arquivos que serão alterados;
-- arquivos existentes que serão preservados;
-- decisões pendentes;
-- riscos.
+- `package-lock.json` -> `npm install -D ...`;
+- `pnpm-lock.yaml` -> `pnpm add -D ...`;
+- `yarn.lock` -> `yarn add -D ...`.
 
-Peça OK antes de:
+Não adicione `acorn` por padrão. Ele era necessário apenas para ferramentas de relatório fora do
+escopo atual.
 
-- instalar pacotes;
-- criar ou refatorar `auth.api.js`;
-- refatorar arquivo existente fora do padrão;
-- alterar schemas de erro existentes.
+## Fase 4 - Base comum Cypress/API
 
-Pare e peça ação manual ao usuário quando:
+Crie ou ajuste a estrutura mínima:
 
-- a pasta `tools/` não contiver `relatorio-cobertura` e/ou `relatorio-execucao`. Essas ferramentas
-  são levadas por copy-paste de um projeto que já as tenha (ver `tools/README.md`); o setup não as
-  cria. Liste o que falta e aguarde o usuário inserir antes de prosseguir.
+```text
+cypress/
+|-- fixtures/
+|   `-- schemas/
+|       |-- erro.schema.json
+|       `-- erro-validacao.schema.json
+`-- support/
+    |-- api/
+    |   |-- config.js
+    |   |-- auth.api.js
+    |   |-- client.js
+    |   |-- requestLogger.api.js
+    |   |-- schema.js
+    |   `-- asserts.base.js
+    |-- tags.js
+    `-- assertions/
+        |-- error.assertions.js
+        `-- pagination.assertions.js
+```
 
-### 3. Implementação
+Use `templates/api-templates.md` como índice e carregue apenas os templates necessários.
+Adapte ao produto. Não copie contrato fictício quando o backend real mostrar outro formato.
 
-Com OK do usuário:
+## Fase 5 - Lint e formatação
 
-- instale somente dependências faltantes (inclua `acorn` explicitamente se o projeto for usar o
-  `tools/relatorio-cobertura`, mesmo que hoje ele resolva via eslint);
-- se a pasta `tools/` não contiver `relatorio-cobertura` e/ou `relatorio-execucao`, **pare e peça ao
-  usuário para inseri-las manualmente** — é um passo manual de copy-paste; o setup **não gera** essas
-  ferramentas (não há fonte de onde copiá-las num projeto novo). Aponte o `tools/README.md` como guia
-  e só continue depois que as pastas existirem;
-- garanta os scripts `cy:log` (`--env LOG_REPORT=true`) e `relatorio-cobertura`
-  (`node tools/relatorio-cobertura`) quando ausentes;
-- verifique o wiring do `relatorio-execucao` no `cypress.config.js`: imports dos geradores e as tasks
-  `apiLog:*` + `after:spec` sob `LOG_REPORT`, com o `requestLogger.api.js` emitindo essas tasks;
-- crie os scripts `lint` e `lint:fix` somente se estiverem ausentes;
-- crie uma configuração ESLint compatível com a versão instalada somente se ela estiver ausente;
-- preserve regras ESLint existentes e reporte conflitos antes de substituí-las;
-- crie somente arquivos ausentes aprovados;
-- refatore somente arquivos aprovados;
-- preserve código existente quando ele já atende ao objetivo;
-- ao criar arquivo comum, inclua comentários curtos de responsabilidade e decisões importantes;
-- rode `prettier` nos arquivos alterados;
-- rode `node --check` nos `.js` alterados;
-- rode `npm run lint`;
-- corrija violações reais; não desative regras nem ignore caminhos novos apenas para deixar o lint
-  verde;
-- use `npm run lint:fix` somente depois de revisar o escopo das correções automáticas.
+Se não houver configuração de lint, crie uma configuração mínima compatível com o projeto.
 
----
+Ela deve incluir regras contra:
+
+- `cy.request` direto em specs;
+- `cy.log(JSON.stringify(...))`;
+- `it.only`, `describe.only`, `context.only`;
+- `expect` em arquivos de request/payload/config;
+- import de faker em `_support/api.js` e `support/api/*.js`;
+- escapes Unicode desnecessários em textos de negócio.
+
+Se já existir `.eslintrc*`, não migre automaticamente para flat config. Preserve o formato e adapte
+as regras no formato existente.
+
+## Fase 6 - Validar
+
+Depois de preparar:
+
+1. Execute `npm run qa:reindex:check`.
+2. Execute `node --check <arquivo>` nos JS criados/alterados, quando aplicável.
+3. Execute `npm run lint` quando configurado.
+4. Se existir smoke test, execute a suíte smoke. Se não existir, não crie smoke automaticamente.
+
+Não desative regras apenas para passar. Corrija violações reais.
 
 ## Critérios de pronto
 
-O projeto está pronto para o `api-criador.md` quando existir:
+O projeto está pronto para o `api-criador.md` quando:
 
-- dependências mínimas (`cypress`, `ajv`, `@faker-js/faker`, `prettier`, `eslint`,
-  `eslint-plugin-cypress` e `acorn`), além dos pacotes exigidos pela configuração adotada, como
-  `@eslint/js` e `globals`;
-- configuração ESLint compatível com a estrutura do projeto;
-- travas de lint do padrão configuradas (ver "Travas de lint do padrão");
-- scripts `lint` e `lint:fix`;
-- `tools/relatorio-cobertura/` presente e `acorn` declarado no `package.json`;
-- `tools/relatorio-execucao/` presente, com wiring no `cypress.config.js` (tasks `apiLog:*` +
-  `after:spec` sob `LOG_REPORT`) e script `cy:log`;
-- guia de portabilidade das ferramentas em `tools/README.md`;
-- `support/api/client.js`;
-- `support/api/schema.js`;
-- `support/api/asserts.base.js`;
-- `support/assertions/error.assertions.js`;
-- `support/api/config.js`;
-- `support/api/auth.api.js` ou decisão explícita de autenticação não aplicável;
-- schemas de erro do produto;
-- `npm run lint` executando sem erros no escopo mantido;
-- comando de execução documentado.
+- Graphify está validado;
+- `graph.json` e `backend-graph.lock.json` existem em `.agents/state/qa-api/`;
+- `npm run qa:reindex:check` passa;
+- scripts `qa:reindex` e `qa:reindex:check` existem;
+- Cypress e dependências de base estão no `package.json`;
+- base comum `cypress/support/api/*` existe;
+- assertions compartilhadas e schemas de erro existem;
+- lint/checks executados não deixam erro bloqueante.
 
----
+Responda obrigatoriamente:
+
+```text
+Pronto para criar suítes: sim
+```
+
+ou:
+
+```text
+Pronto para criar suítes: não
+```
+
+Se não estiver pronto, liste apenas lacunas bloqueantes.
 
 ## Saída final
 
-Ao terminar, entregue:
+Entregue:
 
-- o que já existia e foi preservado;
-- o que foi criado;
-- o que foi alterado;
-- o que ficou pendente por depender do usuário;
-- comando sugerido para rodar uma suíte criada pelo `api-criador.md`.
+- pré-requisitos validados;
+- dependências instaladas;
+- arquivos criados;
+- arquivos alterados;
+- arquivos existentes preservados;
+- validações executadas;
+- lacunas restantes;
+- resposta `Pronto para criar suítes: sim/não`;
+- próximo prompt recomendado, por exemplo:
+
+```text
+Crie testes para a API users.
+```

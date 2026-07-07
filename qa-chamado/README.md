@@ -10,7 +10,11 @@ Crie chamados para os problemas 1 e 3.
 
 ## Entrada ideal
 
-Uma análise anterior com problemas numerados, classificação, confiança, evidências, resultado atual, resultado esperado e limitações.
+Uma análise anterior com problemas numerados, classificação, confiança, evidências, resultado atual,
+resultado esperado e limitações.
+
+Quando existir `reports/faillens/faillens-report.json`, ele deve ser usado como fonte preferencial
+para request/response, cURL, erro real, reprodução e evidências observadas.
 
 ## O que a skill faz
 

@@ -194,9 +194,9 @@ import { RecursoAssert } from "./_support/asserts";
  * @campo campo3 {enum}    required=true values="A,B,C" rejects=D
  * @campo campo4 {boolean} required=true filterable=true
  *
- * @regra campo2-obrigatorio operation=POST field=campo2 condition=missing status=400 message="mensagem exata"
- * @regra campo1-duplicado   operation=POST field=campo1 condition=duplicate status=409 persistence=forbidden message="mensagem exata"
- * @regra update-ignora-campo1 operation=PUT field=campo1 condition=immutable
+ * @regra campo2-obrigatorio operation=POST endpoint="/recursos" field=campo2 condition=missing status=400 message="mensagem exata"
+ * @regra campo1-duplicado   operation=POST endpoint="/recursos" field=campo1 condition=duplicate status=409 persistence=forbidden message="mensagem exata"
+ * @regra update-ignora-campo1 operation=PUT endpoint="/recursos/{id}" field=campo1 condition=immutable
  *
  * @permissao authentication=required
  *
@@ -219,17 +219,20 @@ describe("API Recurso", () => {
   `unique`, `immutable`, `filterable`, `generated`. Para enums use `values="A,B,C"` (entre aspas) e
   `rejects=D` quando houver valor rejeitado. Ordenar igual ao DTO do backend.
 - **`@regra`**: uma por comportamento contratual, com **ID estável** como primeiro token, seguido de
-  atributos `chave=valor`. Atributos previstos: `operation` (POST/GET/PUT/DELETE), `field`,
+  atributos `chave=valor`. Atributos previstos: `operation` (POST/GET/PUT/DELETE), `endpoint`
+  (mesmo path declarado em `@api`), `field`,
   `condition` (missing/duplicate/too-long/above-max/invalid-enum/not-found/immutable/…),
   `status` (HTTP), `persistence` (`forbidden` quando a operação não deve persistir) e `message`
   (mensagem exata entre aspas). Regras silenciosas (ex.: campo ignorado no update) entram **sem**
-  `status` e sem `message`, mas mantêm `operation`/`field`/`condition`. A mensagem deve ser
+  `status` e sem `message`, mas mantêm `operation`/`endpoint`/`field`/`condition`. A mensagem deve ser
   exatamente a confirmada no backend, OpenAPI ou documentação contratual autoritativa. Uma constante
   em `payload.js` é expectativa do teste, não fonte contratual por si. **Não** declare `message`
   quando ela não for confirmada por uma fonte contratual (ex.: erro verboso de
   framework): declare só o `status`.
-  `operation` e `condition` são obrigatórios. `field`, `status`, `message` e `persistence` são
-  condicionais e só entram quando se aplicam e possuem fonte confirmada.
+  `operation` e `condition` são obrigatórios. `endpoint` deve entrar sempre que houver mais de uma
+  rota com o mesmo método. `field`, `status`, `message` e `persistence` são condicionais e só entram
+  quando se aplicam e possuem fonte confirmada. Sem `endpoint`, o `qa:report` tenta inferir pela
+  operação e pelo título, mas registra confiança menor no `coverage.json`.
 
 ### Nomenclatura de IDs de regra
 
@@ -298,9 +301,20 @@ gerador de cobertura). Tags geradas dinamicamente fora desse padrão não são v
   com `<status>` em `nao-aplicavel | incorporado | aplicavel | nao-confirmado`. Declare **só os tipos
   ambíguos** — os cobertos por teste são fato automático e não entram aqui. O relatório **não infere**
   aplicabilidade: sem declaração e sem teste, o tipo vira pendência de classificação. Use
-  `nao-aplicavel` quando o conceito não existe no recurso; `aplicavel` quando falta um cenário que
-  deveria existir; `incorporado` quando a validação vive dentro de outro cenário. O vocabulário de
-  tags é o da subseção "Tag de catálogo" de `01-oraculo-selecao.md`.
+  `nao-confirmado` quando a cobertura pode fazer sentido, mas falta regra, massa, usuário, limite ou
+  decisão do produto. Use `nao-aplicavel` somente quando o conceito claramente não existe no recurso.
+  Use `aplicavel` quando falta um cenário que deveria existir. Use `incorporado` quando a validação
+  vive dentro de outro cenário. O motivo deve ser curto, simples e acionável para QA. Evite jargões
+  quando uma frase comum resolver. O vocabulário de tags é o da subseção "Tag de catálogo" de
+  `01-oraculo-selecao.md`.
+
+Exemplos de motivos simples:
+
+```text
+@cobertura @valor-limite nao-confirmado — o backend não informa tamanho máximo para name/email
+@cobertura @object-level-authorization nao-confirmado — parece haver dono do recurso, mas falta usuário de outro dono para testar
+@cobertura @relacionamento-inexistente nao-aplicavel — esta API não recebe id de outro recurso no payload
+```
 
 O bloco documenta o **contrato esperado confirmado por fonte autoritativa**, não o comportamento
 apenas observado nem uma preferência inventada pelo agente. Bugs ficam nos `it`. Não duplique

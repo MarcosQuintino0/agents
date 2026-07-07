@@ -7,7 +7,7 @@ import process from "process";
 import { fileURLToPath } from "url";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const defaultSkills = ["qa-api", "qa-chamado", "graphify"];
+const defaultSkills = ["qa-api", "qa-chamado", "qa-debug-report", "graphify"];
 const defaultTarget = path.join(".agents", "skills");
 const defaultBackend = "../backend";
 
@@ -42,7 +42,7 @@ function printInstallHelp() {
 
 Opcoes:
   --target <dir>             Pasta de destino das skills (padrao: .agents/skills)
-  --skills <lista>           Skills separadas por virgula (padrao: qa-api,qa-chamado,graphify)
+  --skills <lista>           Skills separadas por virgula (padrao: qa-api,qa-chamado,qa-debug-report,graphify)
   --backend <dir>            Caminho do backend nos scripts qa:reindex (padrao: ../backend)
   --skip-graphify            Copia as skills sem instalar/validar Graphify CLI
   --force-graphify           Reinstala Graphify quando a versao encontrada for diferente
@@ -340,7 +340,7 @@ function scriptValue(toolPath, args = "") {
   return `node "${toPosix(toolPath)}"${args ? ` ${args}` : ""}`;
 }
 
-function configurePackageScripts(projectRoot, targetDir, backend) {
+function configurePackageScripts(projectRoot, targetDir, backend, skills) {
   const packageJsonPath = path.join(projectRoot, "package.json");
 
   if (!fs.existsSync(packageJsonPath)) {
@@ -351,11 +351,23 @@ function configurePackageScripts(projectRoot, targetDir, backend) {
   const pkg = readJson(packageJsonPath);
   pkg.scripts = pkg.scripts || {};
 
+  const installedSkills = new Set(skills);
   const reindexTool = path.relative(projectRoot, path.join(targetDir, "qa-api", "tools", "qa-reindex.mjs"));
-  const scripts = {
-    "qa:reindex": scriptValue(reindexTool, `--backend "${toPosix(backend)}"`),
-    "qa:reindex:check": scriptValue(reindexTool, "--check"),
-  };
+  const reportTool = path.relative(projectRoot, path.join(targetDir, "qa-api", "tools", "qa-report.mjs"));
+  const debugTool = path.relative(projectRoot, path.join(targetDir, "qa-debug-report", "tools", "qa-debug-report.mjs"));
+  const scripts = {};
+
+  if (installedSkills.has("qa-api")) {
+    scripts["qa:reindex"] = scriptValue(reindexTool, `--backend "${toPosix(backend)}"`);
+    scripts["qa:reindex:check"] = scriptValue(reindexTool, "--check");
+    scripts["qa:report"] = scriptValue(reportTool);
+  }
+
+  if (installedSkills.has("qa-debug-report")) {
+    scripts["qa:debug"] = scriptValue(debugTool, "run");
+    scripts["qa:debug:open"] = scriptValue(debugTool, "open");
+    scripts["qa:debug:generate"] = scriptValue(debugTool, "generate");
+  }
 
   let changed = false;
   for (const [name, value] of Object.entries(scripts)) {
@@ -374,6 +386,30 @@ function configurePackageScripts(projectRoot, targetDir, backend) {
   if (changed) {
     writeJson(packageJsonPath, pkg);
   }
+}
+
+function ensureGitignore(projectRoot) {
+  const gitignorePath = path.join(projectRoot, ".gitignore");
+  const entries = [".agents/state/", ".qa-api/", "graphify-out/"];
+
+  const current = fs.existsSync(gitignorePath) ? fs.readFileSync(gitignorePath, "utf8") : "";
+  const lines = current.split(/\r?\n/).filter((line, index, all) => line || index < all.length - 1);
+  const existing = new Set(lines.map((line) => line.trim()));
+  const missing = entries.filter((entry) => !existing.has(entry));
+
+  if (!missing.length) {
+    return;
+  }
+
+  const nextLines = [...lines];
+  if (nextLines.length && nextLines[nextLines.length - 1] !== "") {
+    nextLines.push("");
+  }
+  nextLines.push("# Estado local das skills QA");
+  nextLines.push(...missing);
+
+  fs.writeFileSync(gitignorePath, `${nextLines.join("\n")}\n`, "utf8");
+  log("Gitignore atualizado para ignorar estado local das skills.");
 }
 
 function install(argv) {
@@ -398,13 +434,19 @@ function install(argv) {
   }
 
   if (args.packageScripts) {
-    configurePackageScripts(projectRoot, targetDir, args.backend);
+    configurePackageScripts(projectRoot, targetDir, args.backend, args.skills);
   }
+
+  ensureGitignore(projectRoot);
 
   log("");
   log("Instalacao concluida.");
   log(`Skills: ${toPosix(path.relative(projectRoot, targetDir))}`);
-  log("Proximo passo: rode npm run qa:reindex depois de ajustar --backend se necessario.");
+  const expectedScripts = [];
+  if (args.skills.includes("qa-api")) expectedScripts.push("qa:reindex", "qa:reindex:check", "qa:report");
+  if (args.skills.includes("qa-debug-report")) expectedScripts.push("qa:debug", "qa:debug:open", "qa:debug:generate");
+  if (expectedScripts.length) log(`Scripts esperados: ${expectedScripts.join(", ")}.`);
+  log("Proximo passo: peca para a IA preparar o projeto para testes de API.");
 }
 
 const [command, ...rest] = process.argv.slice(2);

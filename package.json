@@ -1,8 +1,11 @@
 {
   "name": "@marcosquintino/qa-skills",
   "version": "0.1.0",
-  "description": "Instalador das skills QA API, QA Chamado e Graphify.",
+  "description": "Instalador das skills QA API, QA Chamado, QA Debug Report e Graphify.",
   "type": "module",
+  "workspaces": [
+    "packages/faillens"
+  ],
   "bin": {
     "qa-skills": "bin/qa-skills.mjs"
   },
@@ -10,11 +13,15 @@
     "bin/",
     "qa-api/",
     "qa-chamado/",
+    "qa-debug-report/",
     "graphify/",
     "README.md"
   ],
   "scripts": {
-    "check": "node --check bin/qa-skills.mjs && node bin/qa-skills.mjs --help && node bin/qa-skills.mjs install --help"
+    "build:faillens": "npm run build --workspace packages/faillens",
+    "sync:faillens": "node scripts/sync-faillens.mjs",
+    "prepare:qa-debug-report": "npm run build:faillens && npm run sync:faillens",
+    "check": "node --check bin/qa-skills.mjs && node --check scripts/sync-faillens.mjs && node --check qa-debug-report/tools/qa-debug-report.mjs && node bin/qa-skills.mjs --help && node bin/qa-skills.mjs install --help"
   },
   "publishConfig": {
     "access": "public"

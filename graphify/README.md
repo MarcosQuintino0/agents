@@ -1,6 +1,6 @@
 # Graphify Skill
 
-Skill compartilhada para validar e rodar a versão travada do Graphify usada pelas skills de QA.
+Skill compartilhada para validar e executar a versão travada do Graphify usada pelas skills de QA.
 
 ## Versão travada
 
@@ -13,7 +13,7 @@ graphifyy==0.9.8
 No projeto consumidor:
 
 ```bash
-npx @marcosquintino/qa-skills install
+npx @marcosquintino/qa-skills install --backend ../backend
 ```
 
 Esse comando instala as skills e valida/instala `graphifyy==0.9.8`.
@@ -45,16 +45,21 @@ Mantenha as skills como irmãs:
 
 ```text
 .agents/skills/
-├── qa-api/
-├── qa-chamado/
-└── graphify/
+- qa-api/
+- qa-chamado/
+- graphify/
 ```
+
+O `qa:reindex` organiza:
+
+- `graph.json`, obrigatório para a IA navegar pelo backend;
+- `backend-graph.lock.json`, obrigatório para localizar o backend real;
+- `graph.html`, visual humano e não bloqueante;
+- `GRAPH_REPORT.md`, complementar quando existir.
 
 ## Configuração por plataforma de IA
 
-O Graphify oficial tem comandos de integração para várias IAs. Esses comandos não instalam uma versão diferente do Graphify; eles criam arquivos de suporte para cada ambiente saber consultar o grafo.
-
-Exemplos:
+O Graphify oficial tem comandos opcionais de integração para várias IAs:
 
 ```bash
 graphify codex install
@@ -63,32 +68,11 @@ graphify claude install
 graphify agents install
 ```
 
-Use esses comandos quando quiser que a IA consulte o grafo automaticamente em perguntas gerais sobre o projeto.
+Esses comandos não instalam outra versão do Graphify. Eles criam arquivos de suporte para consultas
+gerais ao grafo. Para o fluxo da `qa-api`, são opcionais e não substituem `qa:reindex`.
 
-Para o fluxo da `qa-api`, isso é opcional. O obrigatório é:
-
-```bash
-node .agents/skills/graphify/tools/graphify-runner.mjs --check
-npm run qa:reindex
-```
-
-### Diferença prática
+Documentação oficial:
 
 ```text
-graphifyy / graphify CLI
-= motor que gera graphify-out/graph.json
-
-graphify-runner.mjs
-= valida a versão travada e roda o motor
-
-graphify <plataforma> install
-= cria arquivos de integração para uma IA específica
-```
-
-### Onde saber mais
-
-Documentação oficial do Graphify no PyPI:
-
 https://pypi.org/project/graphifyy/
-
-Na documentação oficial, veja a seção "Make your assistant always use the graph" para a lista completa de plataformas suportadas.
+```

@@ -6,15 +6,17 @@ import path from "path";
 import process from "process";
 import { fileURLToPath } from "url";
 
-const DEFAULT_OUT = "graphify-out";
-const LOCK_DIR = ".qa-api";
+const GRAPHIFY_NATIVE_OUT = "graphify-out";
+const STATE_DIR = path.join(".agents", "state", "qa-api");
+const DEFAULT_OUT = path.join(STATE_DIR, "graphify-out");
+const LOCK_DIR = STATE_DIR;
 const LOCK_FILE = "backend-graph.lock.json";
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 
 function printHelp() {
   console.log(`Uso:
   node .agents/skills/qa-api/tools/qa-reindex.mjs --backend ../backend
-  node .agents/skills/qa-api/tools/qa-reindex.mjs --backend ../backend --out graphify-out
+  node .agents/skills/qa-api/tools/qa-reindex.mjs --backend ../backend --out .agents/state/qa-api/graphify-out
   node .agents/skills/qa-api/tools/qa-reindex.mjs --check
 
 Package.json recomendado:
@@ -119,9 +121,10 @@ O fluxo oficial da skill QA API exige a skill irmã graphify com versão travada
 Estrutura esperada:
 
 .agents/skills/
-├── qa-api/
-├── qa-chamado/
-└── graphify/
+|-- qa-api/
+|-- qa-chamado/
+|-- qa-debug-report/
++-- graphify/
 
 Instale/copie a skill graphify e rode novamente:
 
@@ -216,7 +219,7 @@ Use um caminho dentro do projeto consumidor.`);
 
 function locateGraphJson(projectRoot, backendRoot, outDir) {
   const candidates = [
-    path.join(backendRoot, DEFAULT_OUT, "graph.json"),
+    path.join(backendRoot, GRAPHIFY_NATIVE_OUT, "graph.json"),
     path.join(projectRoot, outDir, "graph.json"),
   ];
 
@@ -247,6 +250,45 @@ function copyGeneratedGraph(sourceDir, targetDir) {
       fs.copyFileSync(source, target);
     }
   }
+}
+
+function clusterBaseForOutputDir(outputDir) {
+  if (path.basename(outputDir) !== GRAPHIFY_NATIVE_OUT) {
+    return null;
+  }
+
+  return path.dirname(outputDir);
+}
+
+function generateHumanGraph(projectRoot, graphifyCommand, outputDir, finalGraphJson) {
+  const clusterBase = clusterBaseForOutputDir(outputDir);
+  if (!clusterBase) {
+    console.warn(`Mapa visual graph.html não gerado automaticamente: --out deve terminar em ${GRAPHIFY_NATIVE_OUT}.`);
+    return false;
+  }
+
+  const result = run(
+    graphifyCommand,
+    [
+      "cluster-only",
+      relativeToProject(projectRoot, clusterBase),
+      "--graph",
+      relativeToProject(projectRoot, finalGraphJson),
+      "--no-label",
+    ],
+    projectRoot,
+  );
+
+  if (result.error || result.status !== 0) {
+    console.warn("Mapa visual graph.html não foi gerado.");
+    const details = commandText(result);
+    if (details) {
+      console.warn(details);
+    }
+    return false;
+  }
+
+  return fs.existsSync(path.join(outputDir, "graph.html"));
 }
 
 function readJson(filePath) {
@@ -320,6 +362,13 @@ npm run qa:reindex`);
     }
   }
 
+  if (lock.graphHtml) {
+    const graphHtmlPath = path.isAbsolute(lock.graphHtml) ? lock.graphHtml : path.resolve(projectRoot, lock.graphHtml);
+    if (!fs.existsSync(graphHtmlPath)) {
+      console.warn(`Mapa visual registrado no lock não foi encontrado: ${relativeToProject(projectRoot, graphHtmlPath)}`);
+    }
+  }
+
   console.log("Grafo e lock OK.");
 }
 
@@ -362,7 +411,7 @@ Exemplo no package.json:
     fail(`Graphify executou, mas não encontrei graph.json.
 
 Caminhos verificados:
-- ${toPosixPath(path.join(backendRoot, DEFAULT_OUT, "graph.json"))}
+- ${toPosixPath(path.join(backendRoot, GRAPHIFY_NATIVE_OUT, "graph.json"))}
 - ${toPosixPath(path.join(projectRoot, outDir, "graph.json"))}
 - ${toPosixPath(path.join(backendRoot, outDir, "graph.json"))}`);
   }
@@ -376,6 +425,13 @@ Caminhos verificados:
   if (!fs.existsSync(finalGraphJson)) {
     fail(`Não foi possível garantir o grafo final em ${relativeToProject(projectRoot, finalGraphJson)}.`);
   }
+
+  const graphHtmlGenerated = generateHumanGraph(
+    projectRoot,
+    graphifyManifest.command || "graphify",
+    outputDir,
+    finalGraphJson,
+  );
 
   // O lock registra qual backend gerou o grafo, para a IA localizar o código real sem YAML.
   const lockDir = path.join(projectRoot, LOCK_DIR);
@@ -392,6 +448,7 @@ Caminhos verificados:
     graphifyManifest: relativeToProject(projectRoot, graphifyManifest.manifestPath),
     graphJson: relativeToProject(projectRoot, finalGraphJson),
     graphReport: relativeToProject(projectRoot, path.join(outputDir, "GRAPH_REPORT.md")),
+    graphHtml: graphHtmlGenerated ? relativeToProject(projectRoot, path.join(outputDir, "graph.html")) : null,
     sourceGraphJson: toPosixPath(sourceGraphJson),
     tool: "qa-api/tools/qa-reindex.mjs",
   };
@@ -400,6 +457,9 @@ Caminhos verificados:
 
   console.log("Reindex QA API concluído.");
   console.log(`Grafo: ${lock.graphJson}`);
+  if (lock.graphHtml) {
+    console.log(`Mapa visual: ${lock.graphHtml}`);
+  }
   console.log(`Lock: ${toPosixPath(path.join(LOCK_DIR, LOCK_FILE))}`);
 }
 

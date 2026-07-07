@@ -1,10 +1,11 @@
 # QA API Skill
 
-Skill para criar, revisar, preparar e analisar testes de API Cypress.
+Skill para preparar projetos Cypress/API, criar suítes, revisar cobertura e analisar reports de
+execução.
 
 ## Fluxo oficial
 
-1. No projeto consumidor, rode o instalador oficial:
+1. No projeto consumidor, rode o instalador:
 
 ```bash
 npx @marcosquintino/qa-skills install --backend ../backend
@@ -12,132 +13,138 @@ npx @marcosquintino/qa-skills install --backend ../backend
 
 Troque `../backend` pelo caminho relativo correto do backend.
 
-Esse comando copia as skills, instala/valida `graphifyy==0.9.8` e configura os scripts
-`qa:reindex` e `qa:reindex:check` quando o projeto tiver `package.json`.
+O instalador copia `qa-api`, `qa-chamado`, `qa-debug-report` e `graphify`, instala/valida `graphifyy==0.9.8`,
+configura `qa:reindex`, `qa:reindex:check`, `qa:report`, `qa:debug`, `qa:debug:open` e `qa:debug:generate` quando houver `package.json`, e ignora
+estado local em `.gitignore`.
 
-2. Confirme a estrutura instalada:
+2. Peça para a IA preparar o projeto:
 
 ```text
-.agents/skills/
-├── qa-api/
-├── qa-chamado/
-└── graphify/
+Prepare o projeto para testes de API.
+Valide Graphify e o lock do backend, execute os comandos necessários quando possível, corrija lacunas da base comum Cypress/API e deixe o projeto pronto para criar suítes. Não crie suítes de APIs ainda.
 ```
 
-3. Rode:
-
-```bash
-npm run qa:reindex
-```
-
-4. Peça para a IA:
+3. Depois peça para criar uma suíte:
 
 ```text
 Crie testes para a API <nome-da-api>.
+Antes de implementar, monte a matriz endpoint x cenário para todas as rotas da API. Não deixe cenário aplicável sem teste ou justificativa.
 ```
 
-### Instalação manual
-
-Se o ambiente não puder usar o instalador npm, copie manualmente:
-
-```text
-.agents/skills/
-├── qa-api/
-├── qa-chamado/
-└── graphify/
-```
-
-Depois instale a versão travada do Graphify CLI:
-
-```bash
-uv tool install graphifyy==0.9.8
-```
-
-Alternativa:
-
-```bash
-pipx install graphifyy==0.9.8
-```
-
-Valide:
-
-```bash
-node .agents/skills/graphify/tools/graphify-runner.mjs --check
-```
-
-E configure no `package.json` do projeto consumidor:
-
-```json
-{
-  "scripts": {
-    "qa:reindex": "node .agents/skills/qa-api/tools/qa-reindex.mjs --backend ../backend",
-    "qa:reindex:check": "node .agents/skills/qa-api/tools/qa-reindex.mjs --check"
-  }
-}
-```
+O usuário não precisa criar `.yml` nem rodar `npm run` manualmente no fluxo normal. O agente executa
+`qa:reindex`, `qa:reindex:check` e, ao final da criação/revisão de suítes, `qa:report` quando puder.
+Ele só pede ação manual se não tiver permissão, se o caminho do backend estiver indefinido ou se o
+ambiente externo falhar.
 
 ## O que a skill faz
 
 - usa Graphify como mapa do backend;
-- lê `.qa-api/backend-graph.lock.json` para localizar o backend usado no reindex;
+- lê `.agents/state/qa-api/backend-graph.lock.json` para localizar o backend usado no reindex;
 - lê o código real antes de definir contrato;
-- cria specs Cypress;
-- cria `_support/api.js`, `_support/payload.js`, `_support/asserts.js`, `_support/helpers.js`;
-- cria schemas de sucesso quando aplicável;
-- aplica o catálogo de testes;
+- prepara a base comum Cypress/API;
+- cria specs Cypress e arquivos `_support`;
+- aplica catálogo de testes, matriz endpoint x cenário e checklist comum;
 - valida status, schema, regra, persistência, não-vazamento e acesso;
+- gera `coverage.html` e `coverage.json` com `qa:report` depois que a suíte existir;
 - revisa a própria saída;
-- analisa reports e entrega problemas numerados para a skill `qa-chamado`.
-
-## Templates por intencao
-
-`templates/api-templates.md` agora e um indice. A skill deve ler somente os templates necessarios
-para a tarefa atual:
-
-- `cypress-base.md`: camada comum, cliente HTTP, log mascarado e config base;
-- `autenticacao.md`: login, token, sem autenticacao, permissao e seguranca;
-- `schemas.md`: AJV e schemas de resposta/erro;
-- `asserts.md`: asserts genericos e asserts do recurso;
-- `erros.md`: contrato de erro, vazamento interno e mensagens;
-- `fixtures.md`: payloads, massa de dados, hooks e cleanup;
-- `crud.md`: cliente do recurso, CRUD, persistencia e listagem;
-- `validacoes.md`: obrigatoriedade, limites, tipos e validacoes data-driven.
+- analisa `report.json`/FailLens e entrega problemas numerados para possível uso pela skill `qa-chamado`.
 
 ## O que a skill não faz automaticamente
 
 - não exige arquivo `.yml`;
-- não instala dependências durante a criação dos testes; a instalação do Graphify acontece no setup
-  explícito com `npx @marcosquintino/qa-skills install`;
-- não altera autenticação sem autorização;
-- não altera schemas compartilhados sem autorização;
+- não instala dependências fora do preparo sem autorização;
+- não altera autenticação real sem autorização;
+- não altera schemas compartilhados existentes sem autorização;
 - não cria testes oficiais sem Graphify;
+- não cria suítes de APIs durante o preparo do projeto;
+- não cria ferramentas legadas como `cy:log`, `relatorio-cobertura` ou `relatorio-execucao`;
+- não executa `qa:debug` automaticamente; debug de falha real é fluxo manual da skill `qa-debug-report`;
 - não usa Graphify como contrato final;
 - não mascara defeito para fazer teste passar;
 - não cria rascunhos de chamados, use `qa-chamado` para isso.
 
-## Lock do backend
+## Artefatos do Graphify
 
-O usuário não precisa criar `.yml`.
-
-O script `qa:reindex` cria automaticamente:
+O script `qa:reindex` cria:
 
 ```text
-.qa-api/backend-graph.lock.json
+.agents/state/qa-api/graphify-out/graph.json
+.agents/state/qa-api/graphify-out/graph.html
+.agents/state/qa-api/backend-graph.lock.json
 ```
 
-A skill usa esse lock para descobrir o backend real por `backendRoot` ou `backendRootAbsolute`.
+`graph.json` e `backend-graph.lock.json` são obrigatórios para criação/refatoração. `graph.html` é
+visual humano e não bloqueia testes. `GRAPH_REPORT.md`, quando existir, é complementar.
+
+## Relatório oficial da suíte
+
+Depois de criar ou revisar uma suíte de API, rode:
+
+```bash
+npm run qa:report -- --api <nome-da-api>
+```
+
+Saídas:
+
+```text
+.agents/state/qa-api/reports/<api>/coverage.html
+.agents/state/qa-api/reports/<api>/coverage.json
+```
+
+O relatório é estático: ele lê specs Cypress, JSDoc, tags `CatalogoTags`, vínculos `@regra:<id>` e
+declarações `@cobertura`. Ele não substitui a execução da suíte; serve para auditar rapidamente o que
+foi criado, o que ficou lacuna e quais alertas de qualidade existem.
+
+## Debug manual de falhas reais
+
+Quando o QA quiser investigar uma falha real da execução Cypress, use a skill irmã `qa-debug-report`:
+
+```bash
+npm run qa:debug -- --spec "cypress/e2e/apis/users/**/*.cy.js"
+npm run qa:debug -- --open --spec "cypress/e2e/apis/users/**/*.cy.js"
+npm run qa:debug:open
+```
+
+Saídas padrão:
+
+```text
+reports/faillens/index.html
+reports/faillens/faillens-report.json
+```
+
+`qa:debug` executa Cypress com instrumentação temporária do FailLens. Use esse relatório para
+debug, reprodução, evidências de falha e apoio a chamados. Não use como substituto de `qa:report`.
+
+Status de cobertura:
+
+- `aplicavel`: precisa de teste.
+- `nao-confirmado`: pode fazer sentido, mas falta contexto.
+- `incorporado`: já está validado dentro de outro teste.
+- `nao-aplicavel`: o conceito claramente não existe nesta API.
+
+## Templates por intenção
+
+Leia `templates/api-templates.md` primeiro e carregue somente o que for necessário:
+
+- `cypress-base.md`: camada comum, cliente HTTP, log mascarado e config;
+- `autenticacao.md`: login, token, sem autenticação, permissão e segurança;
+- `schemas.md`: AJV e schemas;
+- `asserts.md`: asserts genéricos e do recurso;
+- `erros.md`: contrato de erro e não-vazamento;
+- `fixtures.md`: payloads, massa, hooks e cleanup;
+- `crud.md`: cliente do recurso, CRUD, persistência e listagem;
+- `validacoes.md`: obrigatoriedade, limites, tipos e validações.
 
 ## Graphify
 
 Graphify CLI é obrigatório no fluxo oficial e a versão fica travada na skill irmã `graphify`.
 
-Graphify não fica dentro da `qa-api`.
-
-Graphify deve ficar ao lado da `qa-api`:
+Estrutura esperada:
 
 ```text
 .agents/skills/
-├── qa-api/
-├── qa-chamado/
-└── graphify/
+- qa-api/
+- qa-chamado/
+- qa-debug-report/
+- graphify/
 ```

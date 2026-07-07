@@ -1,0 +1,11 @@
+node_modules/
+packages/*/node_modules/
+packages/faillens/dist/
+*.tgz
+npm-debug.log*
+
+.agents/state/
+.qa-api/
+graphify-out/
+reports/
+.faillens/

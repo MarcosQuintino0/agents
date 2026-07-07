@@ -8,6 +8,7 @@ Este agente não cria, revisa ou altera testes. Ele consome uma análise anterio
 
 - análise anterior da `qa-api` com problemas numerados;
 - seleção explícita de problemas, como `1 e 3`;
+- `reports/faillens/faillens-report.json`, quando houver debug report gerado pelo QA;
 - evidências complementares informadas pelo usuário;
 - contexto de API, frontend, segurança, ambiente ou contrato.
 
@@ -20,9 +21,10 @@ Se o usuário não selecionar problemas, pergunte quais números devem virar cha
 3. Recuse chamado para problema inconclusivo, problema exclusivo do teste ou lacuna sem defeito observado.
 4. Agrupe problemas somente quando causa provável e comportamento incorreto forem os mesmos.
 5. Separe problemas diferentes, mesmo que estejam na mesma API ou tela.
-6. Sanitize qualquer evidência antes de montar o chamado.
-7. Escolha o template adequado.
-8. Entregue rascunho em texto, sem abrir chamado em ferramenta externa.
+6. Se existir relatório FailLens, use-o como fonte preferencial para request/response, cURL, erro real, screenshot e reprodução.
+7. Sanitize qualquer evidência antes de montar o chamado.
+8. Escolha o template adequado.
+9. Entregue rascunho em texto, sem abrir chamado em ferramenta externa.
 
 ## Quando usar template de API
 

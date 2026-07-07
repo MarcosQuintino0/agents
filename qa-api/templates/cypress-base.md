@@ -144,3 +144,39 @@ export const apiConfig = {
   },
 };
 ```
+
+---
+
+### `support/tags.js`
+
+Use este vocabulário fechado para a tag primária de catálogo em cada `it`. A tag explica por que o
+teste existe e alimenta o relatório `qa:report`.
+
+```js
+export const CatalogoTags = Object.freeze({
+  FLUXO_PRINCIPAL: "@fluxo-principal",
+  PAGINACAO: "@paginacao",
+  RECURSO_INEXISTENTE: "@recurso-inexistente",
+  OBRIGATORIEDADE: "@obrigatoriedade",
+  VALOR_LIMITE: "@valor-limite",
+  PAYLOAD_EXCESSIVO: "@payload-excessivo",
+  TIPO_INVALIDO: "@tipo-invalido",
+  REGRA_NEGOCIO: "@regra-negocio",
+  CAMPO_DESCONHECIDO: "@campo-desconhecido",
+  MASS_ASSIGNMENT: "@mass-assignment",
+  ENTRADA_INVALIDA: "@entrada-invalida",
+  CONTENT_TYPE_INVALIDO: "@content-type-invalido",
+  METODO_NAO_PERMITIDO: "@metodo-nao-permitido",
+  SEM_AUTENTICACAO: "@sem-autenticacao",
+  CREDENCIAL_INVALIDA: "@credencial-invalida",
+  PERMISSAO_INSUFICIENTE: "@permissao-insuficiente",
+  OBJECT_LEVEL_AUTHORIZATION: "@object-level-authorization",
+  PROPERTY_LEVEL_AUTHORIZATION: "@property-level-authorization",
+  IDEMPOTENCIA: "@idempotencia",
+  CONCORRENCIA: "@concorrencia",
+  RATE_LIMIT: "@rate-limit",
+  TIMEOUT: "@timeout",
+  RELACIONAMENTO_INEXISTENTE: "@relacionamento-inexistente",
+  CAMPO_CONTROLADO: "@campo-controlado",
+});
+```
