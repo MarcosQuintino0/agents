@@ -4,7 +4,7 @@ import path from "node:path";
 import process from "node:process";
 import { execFile } from "node:child_process";
 
-const TOOL_VERSION = "0.2.0";
+const TOOL_VERSION = "0.2.1";
 const GENERATED_FIELDS = new Set([
   "id",
   "uuid",
@@ -1057,14 +1057,32 @@ function callAssertion(testCase) {
 
 describe("QA Oracle mutation runner", () => {
   const results = [];
+  let currentRecord = null;
 
   before(() => {
     cy.writeFile(QA_ORACLE_RESULTS, []);
   });
 
+  Cypress.on("fail", (error) => {
+    if (currentRecord) {
+      currentRecord.status = "killed";
+      currentRecord.error = errorText(error);
+      return false;
+    }
+    throw error;
+  });
+
+  afterEach(() => {
+    const record = currentRecord;
+    currentRecord = null;
+    if (!record) return;
+    results.push(record);
+    cy.writeFile(QA_ORACLE_RESULTS, results);
+  });
+
   QA_ORACLE_CASES.forEach((testCase) => {
     it(testCase.sourceTitle + " :: " + testCase.mutationId, () => {
-      const record = {
+      currentRecord = {
         id: testCase.id,
         sourceTestId: testCase.sourceTestId,
         sourceTitle: testCase.sourceTitle,
@@ -1075,19 +1093,7 @@ describe("QA Oracle mutation runner", () => {
         error: ""
       };
 
-      const failHandler = (error) => {
-        record.status = "killed";
-        record.error = errorText(error);
-        return false;
-      };
-
-      Cypress.once("fail", failHandler);
-
-      cy.then(() => callAssertion(testCase)).then(() => {
-        if (record.status === "survived" && Cypress.off) Cypress.off("fail", failHandler);
-        results.push(record);
-        cy.writeFile(QA_ORACLE_RESULTS, results);
-      });
+      cy.then(() => callAssertion(testCase));
     });
   });
 });
@@ -1106,38 +1112,75 @@ async function writeMutationRunner({ outDir, cases, projectRoot }) {
   return { runnerDir, runnerPath, casesPath, resultsPath };
 }
 
-function cypressCommand() {
-  return process.platform === "win32" ? "npx.cmd" : "npx";
+function displayArg(value) {
+  const text = String(value);
+  return /\s/.test(text) ? `"${text.replace(/"/g, '\\"')}"` : text;
 }
 
 function runCommand(command, args, cwd) {
   return new Promise((resolve) => {
-    execFile(command, args, { cwd, windowsHide: true, maxBuffer: 20 * 1024 * 1024 }, (error, stdout, stderr) => {
-      resolve({
-        status: typeof error?.code === "number" ? error.code : error ? 1 : 0,
-        error: error?.message || "",
-        stdout: String(stdout || ""),
-        stderr: String(stderr || ""),
+    try {
+      execFile(command, args, { cwd, windowsHide: true, maxBuffer: 20 * 1024 * 1024 }, (error, stdout, stderr) => {
+        resolve({
+          status: typeof error?.code === "number" ? error.code : error ? 1 : 0,
+          error: error?.message || "",
+          stdout: String(stdout || ""),
+          stderr: String(stderr || ""),
+        });
       });
-    });
+    } catch (error) {
+      resolve({
+        status: 1,
+        error: error?.message || String(error),
+        stdout: "",
+        stderr: "",
+      });
+    }
   });
 }
 
-async function runCypressMutationRunner({ runnerPath, projectRoot }) {
-  const result = await runCommand(
-    cypressCommand(),
-    [
-      "cypress",
-      "run",
-      "--spec",
-      runnerPath,
-      "--config",
-      "video=false,screenshotOnRunFailure=false",
-    ],
-    projectRoot,
-  );
+async function cypressInvocation({ runnerPath, projectRoot }) {
+  const specPath = toPosix(path.relative(projectRoot, runnerPath));
+  const cypressArgs = [
+    "run",
+    "--spec",
+    specPath,
+    "--config",
+    `specPattern=${specPath},video=false,screenshotOnRunFailure=false`,
+  ];
+  const localCypress = path.join(projectRoot, "node_modules", "cypress", "bin", "cypress");
+
+  if (await pathExists(localCypress)) {
+    return {
+      command: process.execPath,
+      args: [localCypress, ...cypressArgs],
+      display: `node ${displayArg(toPosix(path.relative(projectRoot, localCypress)))} ${cypressArgs
+        .map(displayArg)
+        .join(" ")}`,
+    };
+  }
+
+  if (process.platform === "win32") {
+    const commandLine = ["npx", "cypress", ...cypressArgs].map(displayArg).join(" ");
+    return {
+      command: "cmd.exe",
+      args: ["/d", "/s", "/c", commandLine],
+      display: commandLine,
+    };
+  }
+
   return {
-    command: `${cypressCommand()} cypress run --spec ${toPosix(runnerPath)} --config video=false,screenshotOnRunFailure=false`,
+    command: "npx",
+    args: ["cypress", ...cypressArgs],
+    display: `npx cypress ${cypressArgs.map(displayArg).join(" ")}`,
+  };
+}
+
+async function runCypressMutationRunner({ runnerPath, projectRoot }) {
+  const invocation = await cypressInvocation({ runnerPath, projectRoot });
+  const result = await runCommand(invocation.command, invocation.args, projectRoot);
+  return {
+    command: invocation.display,
     exitCode: result.status,
     stdout: result.stdout.slice(-12000),
     stderr: result.stderr.slice(-12000),
