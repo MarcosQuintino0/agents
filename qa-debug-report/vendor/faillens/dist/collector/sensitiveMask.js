@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DEFAULT_MASK_FIELDS = void 0;
+exports.hasMaskRules = hasMaskRules;
 exports.isSensitiveField = isSensitiveField;
 exports.maskSensitiveData = maskSensitiveData;
 exports.maskUrl = maskUrl;
@@ -66,6 +67,10 @@ function maskedValue(key, value) {
     if (normalized === "bearer")
         return "<TOKEN>";
     return "***";
+}
+function hasMaskRules(config = []) {
+    const options = normalizeOptions(config);
+    return Boolean(options.fields.length || options.patterns.length);
 }
 function isSensitiveField(key, extraFields = []) {
     return sensitiveSet(extraFields).has(canonicalKey(key));

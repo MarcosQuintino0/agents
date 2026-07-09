@@ -1,6 +1,6 @@
-# Manual de Uso: Skill QA API
+﻿# Manual de Uso: Skill QA API
 
-Esta skill organiza agentes de testes de API Cypress em um fluxo reutilizável dependente de Graphify.
+Esta skill organiza agentes de testes de API Cypress em um fluxo reutilizÃ¡vel dependente de Graphify.
 
 ## Fluxo oficial
 
@@ -17,28 +17,28 @@ Troque `../backend` pelo caminho relativo correto do backend.
 Esse comando copia `qa-api`, `qa-chamado`, `qa-debug-report` e `graphify`, instala/valida `graphifyy==0.9.8` e configura
 `qa:reindex`, `qa:reindex:check`, `qa:report`, `qa:debug`, `qa:debug:open` e `qa:debug:generate` quando existir `package.json`.
 
-2. Peça para a IA preparar a base comum:
+2. PeÃ§a para a IA preparar a base comum:
 
 ```text
 Prepare o projeto para testes de API.
-Valide Graphify e o lock do backend, execute os comandos necessários quando possível, corrija lacunas da base comum Cypress/API e deixe o projeto pronto para criar suítes. Não crie suítes de APIs ainda.
+Valide Graphify e o lock do backend, execute os comandos necessÃ¡rios quando possÃ­vel, corrija lacunas da base comum Cypress/API e deixe o projeto pronto para criar suÃ­tes. NÃ£o crie suÃ­tes de APIs ainda.
 ```
 
-3. Depois peça para criar uma suíte:
+3. Depois peÃ§a para criar uma suÃ­te:
 
 ```text
 Crie testes para a API <nome-da-api>.
-Antes de implementar, monte a matriz endpoint x cenário para todas as rotas da API. Não deixe cenário aplicável sem teste ou justificativa.
+Antes de implementar, monte a matriz endpoint x cenÃ¡rio para todas as rotas da API. NÃ£o deixe cenÃ¡rio aplicÃ¡vel sem teste ou justificativa.
 ```
 
-O usuário não cria `.yml`. No fluxo normal, a IA deve executar `qa:reindex` e `qa:reindex:check`
-quando preparar o projeto, e `qa:report` quando finalizar criação ou revisão de suíte. Ação manual só
-entra quando a IA não puder executar comandos, quando faltar caminho do backend ou quando o ambiente
+O usuÃ¡rio nÃ£o cria `.yml`. No fluxo normal, a IA deve executar `qa:reindex` e `qa:reindex:check`
+quando preparar o projeto, e `qa:report` quando finalizar criaÃ§Ã£o ou revisÃ£o de suÃ­te. AÃ§Ã£o manual sÃ³
+entra quando a IA nÃ£o puder executar comandos, quando faltar caminho do backend ou quando o ambiente
 externo falhar.
 
 ## Fluxo manual
 
-Use somente quando o ambiente não puder usar o instalador ou quando a IA pedir uma ação manual.
+Use somente quando o ambiente nÃ£o puder usar o instalador ou quando a IA pedir uma aÃ§Ã£o manual.
 
 Estrutura esperada:
 
@@ -50,7 +50,7 @@ Estrutura esperada:
 - graphify/
 ```
 
-Instale a versão travada do Graphify:
+Instale a versÃ£o travada do Graphify:
 
 ```bash
 uv tool install graphifyy==0.9.8
@@ -80,50 +80,50 @@ Configure scripts no `package.json`:
 
 ## Artefatos do reindex
 
-Obrigatórios para criação/refatoração:
+ObrigatÃ³rios para criaÃ§Ã£o/refatoraÃ§Ã£o:
 
 - `.agents/state/qa-api/graphify-out/graph.json`
 - `.agents/state/qa-api/backend-graph.lock.json`
 
 Complementares:
 
-- `.agents/state/qa-api/graphify-out/GRAPH_REPORT.md`, quando disponível
+- `.agents/state/qa-api/graphify-out/GRAPH_REPORT.md`, quando disponÃ­vel
 - `.agents/state/qa-api/graphify-out/graph.html`, mapa visual humano
 
-`graph.html` não bloqueia testes. `graph.json` continua sendo o mapa usado pela IA.
+`graph.html` nÃ£o bloqueia testes. `graph.json` continua sendo o mapa usado pela IA.
 
-## Relatório oficial dos testes
+## RelatÃ³rio oficial dos testes
 
-Depois de criar ou revisar uma suíte, a IA deve gerar o relatório oficial quando possível:
+Depois de criar ou revisar uma suÃ­te, a IA deve gerar o relatÃ³rio oficial quando possÃ­vel:
 
 ```bash
 npm run qa:report -- --api <nome-da-api>
 ```
 
-Também é possível apontar uma pasta específica:
+TambÃ©m Ã© possÃ­vel apontar uma pasta especÃ­fica:
 
 ```bash
 npm run qa:report -- --dir cypress/e2e/apis/<nome-da-api>
 ```
 
-Saídas:
+SaÃ­das:
 
 ```text
 .agents/state/qa-api/reports/<api>/coverage.html
 .agents/state/qa-api/reports/<api>/coverage.json
 ```
 
-`coverage.html` é a visão humana. `coverage.json` é a fonte estruturada para revisão posterior pela
-IA. O relatório não executa Cypress; ele audita JSDoc, tags `CatalogoTags`, vínculos `@regra:<id>` e
-declarações `@cobertura` nos specs gerados.
+`coverage.html` Ã© a visÃ£o humana. `coverage.json` Ã© a fonte estruturada para revisÃ£o posterior pela
+IA. O relatÃ³rio nÃ£o executa Cypress; ele audita JSDoc, tags `CatalogoTags`, vÃ­nculos `@regra:<id>` e
+declaraÃ§Ãµes `@cobertura` nos specs gerados.
 
-O `coverage.json` também inclui `coverageByEndpoint`, `catalogAssessment`, `logicalCases` para
+O `coverage.json` tambÃ©m inclui `coverageByEndpoint`, `catalogAssessment`, `logicalCases` para
 testes data-driven e `aiNextActions`. Esses campos ajudam a IA a continuar o trabalho depois que o QA
 der mais contexto.
 
-## Relatório manual de debug
+## RelatÃ³rio manual de debug
 
-Quando o QA quiser investigar uma falha real de execução Cypress, use a skill irmã `qa-debug-report`:
+Quando o QA quiser investigar uma falha real de execuÃ§Ã£o Cypress, use a skill irmÃ£ `qa-debug-report`:
 
 ```bash
 npm run qa:debug -- --spec "cypress/e2e/apis/users/**/*.cy.js"
@@ -131,28 +131,43 @@ npm run qa:debug -- --open --spec "cypress/e2e/apis/users/**/*.cy.js"
 npm run qa:debug:open
 ```
 
-Saídas padrão:
+SaÃ­das padrÃ£o:
 
 ```text
 reports/faillens/index.html
 reports/faillens/faillens-report.json
 ```
 
-`qa:debug` executa Cypress com instrumentação temporária do FailLens e gera evidências para debug,
-reprodução e chamados. Ele não deve rodar automaticamente ao criar ou revisar suítes. Use somente
-quando o usuário pedir execução/debug ou autorizar claramente.
+`qa:debug` executa Cypress com instrumentaÃ§Ã£o temporÃ¡ria do FailLens e gera evidÃªncias para debug,
+reproduÃ§Ã£o e chamados. Ele nÃ£o deve rodar automaticamente ao criar ou revisar suÃ­tes. Use somente
+quando o usuÃ¡rio pedir execuÃ§Ã£o/debug ou autorizar claramente.
+
+Para usar a aba **Replay**, abra o relatorio em localhost com:
+
+```bash
+npm run qa:debug:open
+```
+
+Para executar os testes, gerar o relatorio e ja abrir em localhost, use:
+
+```bash
+npm run qa:debug -- --open --spec "cypress/e2e/apis/users/**/*.cy.js"
+```
+
+O arquivo `reports/faillens/index.html` aberto por `file://` continua util para leitura, mas nao
+permite reenviar requests pela aba Replay.
 
 Os status de `@cobertura` devem ser simples:
 
 - `aplicavel`: precisa de teste.
 - `nao-confirmado`: pode fazer sentido, mas falta contexto.
-- `incorporado`: já foi validado dentro de outro teste.
-- `nao-aplicavel`: o conceito claramente não existe nesta API.
+- `incorporado`: jÃ¡ foi validado dentro de outro teste.
+- `nao-aplicavel`: o conceito claramente nÃ£o existe nesta API.
 
-Prefira explicações curtas para QA, como:
+Prefira explicaÃ§Ãµes curtas para QA, como:
 
 ```text
-@cobertura @valor-limite nao-confirmado - o backend não informa tamanho máximo para name/email
+@cobertura @valor-limite nao-confirmado - o backend nÃ£o informa tamanho mÃ¡ximo para name/email
 ```
 
 ## Agentes internos
@@ -161,49 +176,49 @@ Prefira explicações curtas para QA, como:
 | --- | --- |
 | `agents/api-preparador.md` | Preparar a base compartilhada Cypress/API. |
 | `agents/backend-index.md` | Validar Graphify, lock e reindex. |
-| `agents/api-criador.md` | Criar ou refatorar a suíte completa de uma API. |
-| `agents/api-revisor.md` | Revisar uma suíte existente e identificar lacunas. |
+| `agents/api-criador.md` | Criar ou refatorar a suÃ­te completa de uma API. |
+| `agents/api-revisor.md` | Revisar uma suÃ­te existente e identificar lacunas. |
 | `agents/api-analisador.md` | Analisar `report.json`/FailLens e entregar problemas numerados. |
 
 ## Templates sob demanda
 
-`templates/api-templates.md` é o índice. Use-o para escolher arquivos certos e evitar carregar
+`templates/api-templates.md` Ã© o Ã­ndice. Use-o para escolher arquivos certos e evitar carregar
 exemplos irrelevantes.
 
 ## Regra do Graphify
 
-Graphify é obrigatório no fluxo oficial.
+Graphify Ã© obrigatÃ³rio no fluxo oficial.
 
 Use `graph.json` como mapa estrutural para localizar controller, router, DTO, service, repository,
-handler, validações, exceptions e middlewares. Use o lock para descobrir o backend root usado no
+handler, validaÃ§Ãµes, exceptions e middlewares. Use o lock para descobrir o backend root usado no
 reindex.
 
-Graphify não é contrato final. Depois de encontrar arquivos candidatos, abra o código real do
+Graphify nÃ£o Ã© contrato final. Depois de encontrar arquivos candidatos, abra o cÃ³digo real do
 backend antes de definir payload, campos, obrigatoriedade, tipos, nulabilidade, status, mensagens,
-regras de negócio, persistência, segurança e formato de erro.
+regras de negÃ³cio, persistÃªncia, seguranÃ§a e formato de erro.
 
-## Configuração por plataforma de IA
+## ConfiguraÃ§Ã£o por plataforma de IA
 
 O Graphify oficial possui comandos opcionais por plataforma, como Codex, Cursor, Claude e Agent
-Skills. Eles criam arquivos de suporte para consultas gerais ao grafo, mas não são obrigatórios para
-criar testes com `qa-api` e não substituem `qa:reindex`.
+Skills. Eles criam arquivos de suporte para consultas gerais ao grafo, mas nÃ£o sÃ£o obrigatÃ³rios para
+criar testes com `qa-api` e nÃ£o substituem `qa:reindex`.
 
-Consulte também:
+Consulte tambÃ©m:
 
 ```text
 .agents/skills/graphify/README.md
 ```
 
-## Regras de segurança
+## Regras de seguranÃ§a
 
-- Não invente contrato.
-- Não crie teste sem oráculo confiável.
-- Durante o preparo, pode instalar dependências de teste, alterar `package.json` e criar a base comum.
-- Fora do preparo, não instale dependências nem altere `package.json` sem autorização.
-- Não execute `qa:debug` automaticamente; ele é manual para falhas reais de execução.
-- Não altere autenticação, schemas compartilhados ou configurações sensíveis sem autorização.
-- Não crie ferramentas legadas como `cy:log`, `relatorio-cobertura` ou `relatorio-execucao`; use
-  `qa:report` para o relatório oficial da skill.
-- Não exponha tokens, cookies, senhas ou Authorization em logs, reports, cURL ou chamados.
-- Não mascare defeito para fazer teste passar.
-- Não crie `mapeamento-api.md` ou `mapeamento-api.json`.
+- NÃ£o invente contrato.
+- NÃ£o crie teste sem orÃ¡culo confiÃ¡vel.
+- Durante o preparo, pode instalar dependÃªncias de teste, alterar `package.json` e criar a base comum.
+- Fora do preparo, nÃ£o instale dependÃªncias nem altere `package.json` sem autorizaÃ§Ã£o.
+- NÃ£o execute `qa:debug` automaticamente; ele Ã© manual para falhas reais de execuÃ§Ã£o.
+- NÃ£o altere autenticaÃ§Ã£o, schemas compartilhados ou configuraÃ§Ãµes sensÃ­veis sem autorizaÃ§Ã£o.
+- NÃ£o crie ferramentas legadas como `cy:log`, `relatorio-cobertura` ou `relatorio-execucao`; use
+  `qa:report` para o relatÃ³rio oficial da skill.
+- Nao envie logs, reports, cURL ou chamados com tokens, cookies, senhas ou Authorization para fora do ambiente controlado.
+- NÃ£o mascare defeito para fazer teste passar.
+- NÃ£o crie `mapeamento-api.md` ou `mapeamento-api.json`.

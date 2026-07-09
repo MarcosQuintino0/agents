@@ -1,0 +1,84 @@
+site_name: QA Skills
+site_description: Ecossistema de agentes para testes de API, fuzzing, debug report e evidencias com FailLens.
+site_author: QA Skills
+repo_name: qa-skills
+
+theme:
+  name: material
+  language: pt-BR
+  palette:
+    - scheme: slate
+      primary: indigo
+      accent: cyan
+      toggle:
+        icon: material/weather-sunny
+        name: Mudar para modo claro
+    - scheme: default
+      primary: indigo
+      accent: blue
+      toggle:
+        icon: material/weather-night
+        name: Mudar para modo escuro
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.tabs.link
+
+plugins:
+  - search:
+      lang: pt
+  - include-markdown
+  - minify:
+      minify_html: true
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+
+nav:
+  - Inicio: index.md
+  - Comece Aqui: comece-aqui.md
+  - Ecossistema:
+      - Visao Geral: ecossistema/visao-geral.md
+      - Fluxo End-to-End: ecossistema/fluxo-end-to-end.md
+      - Quando Usar Cada Skill: ecossistema/quando-usar-cada-skill.md
+  - Skills:
+      - Visao Geral: skills/index.md
+      - qa-api: skills/qa-api.md
+      - qa-api-fuzz: skills/qa-api-fuzz.md
+      - qa-debug-report: skills/qa-debug-report.md
+      - qa-chamado: skills/qa-chamado.md
+      - graphify: skills/graphify.md
+  - Guias:
+      - Instalacao: guias/instalacao.md
+      - Preparar Projeto: guias/preparar-projeto.md
+      - Criar Suite de API: guias/criar-suite-api.md
+      - Gerar QA Report: guias/gerar-qa-report.md
+      - Investigar Falha Real: guias/investigar-falha-real.md
+      - Fazer Fuzzing: guias/fuzzing.md
+      - Criar Chamado: guias/criar-chamado.md
+  - Referencia:
+      - Comandos: referencia/comandos.md
+      - Artefatos Gerados: referencia/artefatos-gerados.md
+      - Contrato de Metadata: referencia/contrato-metadata.md
+      - Estrutura do Consumidor: referencia/estrutura-consumidor.md
+  - FailLens:
+      - Visao Geral: faillens/visao-geral.md
+      - Arquitetura: faillens/arquitetura.md
+      - Seguranca: faillens/seguranca.md
+  - Contribuindo:
+      - Criar Nova Skill: contribuindo/criar-nova-skill.md
+      - Checklist de Docs: contribuindo/checklist-docs.md

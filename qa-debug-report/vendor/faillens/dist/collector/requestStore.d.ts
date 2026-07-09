@@ -47,6 +47,7 @@ export declare class RequestStore {
     private currentTestId?;
     private currentSpecPath;
     private readonly maskConfig;
+    private readonly shouldMask;
     constructor(maskFields?: string[], maskPatterns?: string[]);
     private getSpec;
     private findTest;

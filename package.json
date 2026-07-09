@@ -22,7 +22,9 @@
     "build:faillens": "npm run build --workspace packages/faillens",
     "sync:faillens": "node scripts/sync-faillens.mjs",
     "prepare:qa-debug-report": "npm run build:faillens && npm run sync:faillens",
-    "check": "node --check bin/qa-skills.mjs && node --check scripts/sync-faillens.mjs && node --check qa-api-fuzz/scripts/lib/common.mjs && node --check qa-api-fuzz/scripts/lib/profile-utils.mjs && node --check qa-api-fuzz/scripts/qa-fuzz-profile.mjs && node --check qa-api-fuzz/scripts/qa-fuzz-lint.mjs && node --check qa-api-fuzz/scripts/qa-fuzz.mjs && node --check qa-api-fuzz/scripts/qa-fuzz-replay.mjs && node --check qa-debug-report/tools/qa-debug-report.mjs && node bin/qa-skills.mjs --help && node bin/qa-skills.mjs install --help"
+    "docs:serve": "node scripts/run-mkdocs.mjs serve",
+    "docs:build": "node scripts/run-mkdocs.mjs build --strict",
+    "check": "node --check bin/qa-skills.mjs && node --check scripts/sync-faillens.mjs && node --check scripts/run-mkdocs.mjs && node --check qa-api-fuzz/scripts/lib/common.mjs && node --check qa-api-fuzz/scripts/lib/profile-utils.mjs && node --check qa-api-fuzz/scripts/qa-fuzz-profile.mjs && node --check qa-api-fuzz/scripts/qa-fuzz-lint.mjs && node --check qa-api-fuzz/scripts/qa-fuzz.mjs && node --check qa-api-fuzz/scripts/qa-fuzz-replay.mjs && node --check qa-debug-report/tools/qa-debug-report.mjs && node bin/qa-skills.mjs --help && node bin/qa-skills.mjs install --help"
   },
   "publishConfig": {
     "access": "public"

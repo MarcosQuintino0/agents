@@ -24,6 +24,9 @@ export const clientScript = String.raw`
     seqShown: Object.create(null), assertShown: Object.create(null),
     timelineOpen: Object.create(null), callFilter: Object.create(null),
     drawer: null };
+  var replayState = Object.create(null);
+  var replayUi = { tab: Object.create(null), tokenEditing: Object.create(null),
+    tokenValue: Object.create(null), sequence: Object.create(null) };
   var sidebar = document.getElementById("test-list");
   var detail = document.getElementById("detail");
   var toast = document.getElementById("toast");
@@ -601,6 +604,298 @@ export const clientScript = String.raw`
   }
 
   // ─── Timeline: accordion com filtro Principais/Todas + code-grid da chamada selecionada ───
+  function replayKey(test, request) {
+    return test.id + "::" + (request && request.id || "request");
+  }
+
+  function replayScopeKey(test) {
+    return test.id || "test";
+  }
+
+  function methodOptions(method) {
+    return ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"].map(function (item) {
+      return '<option value="' + item + '"' + (item === method ? " selected" : "") + '>' + item + '</option>';
+    }).join("");
+  }
+
+  function replayTab(test) {
+    var key = replayScopeKey(test);
+    return replayUi.tab[key] || "body";
+  }
+
+  function replayExpectedLabel(test) {
+    var expectation = test.statusExpectation || {};
+    if (expectation.label != null && expectation.label !== "") return String(expectation.label);
+    if (expectation.expected != null) return String(expectation.expected);
+    if (expectation.min != null && expectation.max != null) return expectation.min + "-" + expectation.max;
+    return "n/a";
+  }
+
+  function replayRequestExpectedLabel(test, request) {
+    if (!request) return "n/a";
+    if (request.id === test.mainRequestId) return replayExpectedLabel(test);
+    if (request.receivedStatus != null) return String(request.receivedStatus);
+    return "n/a";
+  }
+
+  function replayMatchesExpectation(test, status) {
+    if (status == null) return false;
+    var expectation = test.statusExpectation || {};
+    var number = Number(status);
+    if (expectation.expected != null) return String(status) === String(expectation.expected);
+    if (expectation.min != null && expectation.max != null && !Number.isNaN(number)) {
+      return number >= Number(expectation.min) && number <= Number(expectation.max);
+    }
+    if (expectation.label != null && expectation.label !== "") return String(status) === String(expectation.label);
+    return false;
+  }
+
+  function replayRequestMatchesExpectation(test, request, status) {
+    if (!request || status == null) return false;
+    if (request.id === test.mainRequestId) return replayMatchesExpectation(test, status);
+    return String(status) === String(request.receivedStatus);
+  }
+
+  function replayRequestExpectationKind(test, request) {
+    return request && request.id === test.mainRequestId ? "contract" : "captured";
+  }
+
+  function replayStatusMeaning(status) {
+    var number = Number(status);
+    return Number.isNaN(number) ? "Status HTTP" : statusMeaning(number);
+  }
+
+  function findTokenValue(value) {
+    var found = "";
+    var seen = [];
+    function walk(node) {
+      if (found || !node || typeof node !== "object" || seen.indexOf(node) >= 0) return;
+      seen.push(node);
+      Object.keys(node).some(function (key) {
+        var child = node[key];
+        if (/^(access[_-]?token|id[_-]?token|refresh[_-]?token|token|jwt)$/i.test(key) && (typeof child === "string" || typeof child === "number")) {
+          found = String(child);
+          return true;
+        }
+        walk(child);
+        return Boolean(found);
+      });
+    }
+    walk(value);
+    return found;
+  }
+
+  function capturedTokenFor(test) {
+    var requests = test.requests || [];
+    for (var index = 0; index < requests.length; index += 1) {
+      var token = findTokenValue(requests[index].responseBody);
+      if (token) return token;
+    }
+    for (var headerIndex = 0; headerIndex < requests.length; headerIndex += 1) {
+      var headers = requests[headerIndex].requestHeaders || {};
+      var authKey = Object.keys(headers).find(function (key) { return key.toLowerCase() === "authorization"; });
+      var authValue = authKey ? String(headers[authKey] || "") : "";
+      var match = authValue.match(/^Bearer\s+(.+)$/i);
+      if (match && match[1] && !/^<.*>$/.test(match[1]) && match[1] !== "***") return match[1];
+    }
+    return "";
+  }
+
+  function replayTokenValue(test) {
+    return replayUi.tokenValue[replayScopeKey(test)] || capturedTokenFor(test);
+  }
+
+  function replayTokenPreview(test) {
+    var custom = replayUi.tokenValue[replayScopeKey(test)];
+    var token = custom || capturedTokenFor(test);
+    if (!token) return "Nenhum token capturado neste teste";
+    return (custom ? "Token editado nesta sessao: " : "Token capturado pelo relatorio: ") + token;
+  }
+
+  function replayHeadersText(request, test) {
+    var headers = request.requestHeaders || {};
+    var token = replayTokenValue(test);
+    if (!token) return json(headers);
+    var copy = {};
+    Object.keys(headers).forEach(function (key) { copy[key] = headers[key]; });
+    var hasAuthorization = Object.keys(copy).some(function (key) { return key.toLowerCase() === "authorization"; });
+    if (hasAuthorization || (request.usedVariables || []).indexOf("$TOKEN") >= 0) {
+      var authKey = Object.keys(copy).find(function (key) { return key.toLowerCase() === "authorization"; }) || "authorization";
+      copy[authKey] = /^Bearer\s+/i.test(token) ? token : "Bearer " + token;
+    }
+    return json(copy);
+  }
+
+  function replayBodyText(request) {
+    return request.requestBody === undefined ? "" : json(request.requestBody);
+  }
+
+  function replayRequestBadge(request, test) {
+    var bad = isBadRequest(request, test);
+    var status = request.receivedStatus == null ? "sem resposta" : String(request.receivedStatus);
+    var label = bad && request.id === test.mainRequestId ? status + " != " + replayExpectedLabel(test) : status;
+    return '<span class="replay-request-status ' + (bad ? "bad" : "ok") + '">' + e(label) + '</span>';
+  }
+
+  function replayRequestCollectionHtml(test) {
+    var requests = test.requests || [];
+    if (!requests.length) return '<p class="empty-note">Nenhuma request capturada.</p>';
+    return requests.map(function (request, index) {
+      var active = request.id === state.requestId;
+      var bad = isBadRequest(request, test);
+      var methodClass = String(request.method || "get").toLowerCase();
+      var phase = request.id === test.mainRequestId ? "causadora" : (PHASE_LABELS[request.phase] || "chamada");
+      return '<button class="replay-request-item ' + (active ? "active " : "") + (bad ? "bad" : "") + '" data-request="' + e(request.id) + '">' +
+        '<span class="replay-request-index">' + e(index + 1) + '</span>' +
+        '<span class="replay-request-copy"><span><b class="request-method ' + e(methodClass) + '">' + e(request.method || "GET") + '</b> ' +
+        '<code title="' + e(request.originalUrl || request.url || "") + '">' + e(chainedUrl(request)) + '</code></span>' +
+        '<small>' + e(phase) + '</small></span>' + replayRequestBadge(request, test) + '</button>';
+    }).join("");
+  }
+
+  function replayInnerTabsHtml(test) {
+    var active = replayTab(test);
+    return '<nav class="replay-inner-tabs" aria-label="Dados do replay">' +
+      '<button class="replay-inner-tab ' + (active === "token" ? "active" : "") + '" data-replay-tab="token">Token</button>' +
+      '<button class="replay-inner-tab ' + (active === "body" ? "active" : "") + '" data-replay-tab="body">Body</button>' +
+      '<button class="replay-inner-tab ' + (active === "headers" ? "active" : "") + '" data-replay-tab="headers">Headers</button></nav>';
+  }
+
+  function replayTabContentHtml(test, request) {
+    var key = replayScopeKey(test);
+    var active = replayTab(test);
+    if (active === "headers") {
+      return '<div class="replay-tab-panel"><div class="replay-panel-head"><b>Headers reenviados</b><span>JSON</span></div>' +
+        '<textarea class="replay-textarea replay-editor-area" data-replay-headers spellcheck="false">' + e(replayHeadersText(request, test)) + '</textarea>' +
+        '<p class="replay-note">Em ambiente controlado, o relatorio mantem o payload completo para permitir replay fiel.</p></div>';
+    }
+    if (active === "token") {
+      var editing = !!replayUi.tokenEditing[key];
+      if (editing) {
+        var token = replayUi.tokenValue[key] || capturedTokenFor(test) || "";
+        return '<div class="replay-tab-panel"><div class="replay-panel-head"><b>Editar token antes do replay</b><span>sessao local</span></div>' +
+          '<label class="replay-token-field"><span>Bearer token</span><textarea class="replay-textarea replay-token-input" data-replay-token-input spellcheck="false">' + e(token) + '</textarea></label>' +
+          '<div class="replay-token-actions"><button class="copy-button primary compact" data-replay-token-save>Salvar</button><button class="copy-button secondary compact" data-replay-token-cancel>Cancelar</button></div>' +
+          '<p class="replay-note">O token editado fica apenas na memoria desta aba e e usado como Authorization no replay.</p></div>';
+      }
+      return '<div class="replay-tab-panel"><div class="replay-panel-head"><b>Token usado no replay</b><span>editavel</span></div>' +
+        '<div class="replay-token-preview"><span>' + e(replayTokenPreview(test)) + '</span><button class="icon-wrap tight" data-replay-token-edit aria-label="Editar token" title="Editar token">' + svgIcon('<path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>') + '</button></div>' +
+        '<p class="replay-note">Use isto quando quiser trocar o token antes de reenviar requests autenticadas.</p></div>';
+    }
+    return '<div class="replay-tab-panel"><div class="replay-panel-head"><b>Payload enviado no replay</b><span>JSON</span></div>' +
+      '<textarea class="replay-textarea replay-editor-area body" data-replay-body spellcheck="false">' + e(replayBodyText(request)) + '</textarea>' +
+      '<p class="replay-note">Voce pode ajustar o corpo antes de enviar a request selecionada.</p></div>';
+  }
+
+  function replayMetricStripHtml(test, selectedRequest, entry) {
+    var response = entry && entry.response || {};
+    var captured = selectedRequest && selectedRequest.receivedStatus != null ? String(selectedRequest.receivedStatus) : "sem resposta";
+    var replayed = response.status != null ? String(response.status) : "n/a";
+    var time = response.durationMs != null ? duration(response.durationMs) : duration(selectedRequest && selectedRequest.durationMs);
+    return '<div class="replay-metric-strip">' +
+      '<div><span>capturado</span><strong>' + e(captured) + '</strong></div>' +
+      '<div><span>esperado</span><strong>' + e(replayRequestExpectedLabel(test, selectedRequest)) + '</strong></div>' +
+      '<div><span>replay</span><strong>' + e(replayed) + '</strong></div>' +
+      '<div><span>tempo</span><strong>' + e(time) + '</strong></div></div>';
+  }
+
+  function replaySequenceHtml(test) {
+    var seq = replayUi.sequence[replayScopeKey(test)];
+    if (!seq) return "";
+    var requests = test.requests || [];
+    return '<div class="replay-sequence-progress">' + requests.map(function (request, index) {
+      var done = seq.done && seq.done[request.id];
+      var active = seq.loading && seq.index === index;
+      return '<div class="replay-progress-row ' + (done ? "done " : "") + (active ? "active" : "") + '">' +
+        '<span>' + e(index + 1) + '</span><b>' + e(request.method || "GET") + ' ' + e(chainedUrl(request)) + '</b><small>' +
+        e(done ? "concluido" : active ? "em execucao" : "aguardando") + '</small></div>';
+    }).join("") + '</div>';
+  }
+
+  function replayResponseCompareHtml(selectedRequest, response) {
+    var capturedStatus = selectedRequest && selectedRequest.receivedStatus != null ? String(selectedRequest.receivedStatus) : "sem resposta";
+    var replayStatus = response && response.status != null ? String(response.status) : "sem resposta";
+    var capturedBody = selectedRequest ? json(selectedRequest.responseBody) : "sem corpo";
+    var replayBody = response ? json(response.body) : "sem corpo";
+    var sameBody = capturedBody === replayBody;
+    return '<div class="replay-response-compare">' +
+      '<div class="replay-response-tabs"><span>Comparacao de JSON</span><b class="replay-compare-chip ' + (sameBody ? "same" : "changed") + '">' + (sameBody ? "JSON igual" : "JSON diferente") + '</b></div>' +
+      '<div class="replay-json-grid">' +
+      '<section class="replay-json-panel captured"><div class="replay-json-head"><div><b>Capturado no teste</b><span>Status ' + e(capturedStatus) + '</span></div><button class="copy-button mini" data-copy-kind="captured-response" aria-label="Copiar JSON capturado" title="Copiar JSON capturado">' + COPY_ICON + '</button></div><pre class="replay-response-code">' + e(capturedBody) + '</pre></section>' +
+      '<section class="replay-json-panel replayed"><div class="replay-json-head"><div><b>Replay agora</b><span>Status ' + e(replayStatus) + '</span></div><button class="copy-button mini" data-copy-kind="replay-response" aria-label="Copiar JSON do replay" title="Copiar JSON do replay">' + COPY_ICON + '</button></div><pre class="replay-response-code">' + e(replayBody) + '</pre></section>' +
+      '</div></div>';
+  }
+
+  function replayResultHtml(test, selectedRequest) {
+    var key = replayKey(test, selectedRequest);
+    var entry = replayState[key];
+    var sequence = replayUi.sequence[replayScopeKey(test)];
+    if (sequence && sequence.loading) {
+      return '<div class="replay-diagnostic-card running"><div class="replay-alert"><b>Reproduzindo sequencia</b><span>Executando as chamadas capturadas em ordem.</span></div>' +
+        replaySequenceHtml(test) + '</div>';
+    }
+    if (!entry) {
+      return '<div class="replay-diagnostic-card idle"><div class="replay-alert"><b>Teste quebrado detectado</b><span>Use o replay para confirmar se a API ainda viola o contrato.</span></div>' +
+        replayMetricStripHtml(test, selectedRequest, null) +
+        '<div class="replay-contract-summary"><b>Resumo do replay</b><pre>referencia: ' + e(replayRequestExpectationKind(test, selectedRequest) === "contract" ? "contrato do teste" : "status capturado da request") + '\nesperado: ' + e(replayRequestExpectedLabel(test, selectedRequest)) + '\ncapturado: ' + e(selectedRequest && selectedRequest.receivedStatus != null ? selectedRequest.receivedStatus : "sem resposta") + '\nendpoint: ' + e(selectedRequest ? selectedRequest.method + " " + chainedUrl(selectedRequest) : "n/a") + '</pre></div></div>';
+    }
+    if (entry.loading) return '<div class="replay-diagnostic-card running"><div class="replay-alert"><b>Replay em andamento</b><span>Enviando request pelo servidor local do FailLens.</span></div></div>';
+    if (entry.error || entry.ok === false) {
+      return '<div class="replay-diagnostic-card failed"><div class="replay-alert"><b>Replay nao concluido</b><span>' + e(entry.error || "Erro desconhecido") + '</span></div>' +
+        replayMetricStripHtml(test, selectedRequest, entry) + '</div>';
+    }
+    var response = entry.response || {};
+    var original = selectedRequest && selectedRequest.receivedStatus != null ? String(selectedRequest.receivedStatus) : "sem resposta";
+    var replayed = response.status != null ? String(response.status) : "sem resposta";
+    var sameStatus = original === replayed;
+    var expectationKind = replayRequestExpectationKind(test, selectedRequest);
+    var nowMatches = replayRequestMatchesExpectation(test, selectedRequest, response.status);
+    var alertClass = expectationKind === "contract"
+      ? (nowMatches ? "fixed" : (sameStatus ? "reproduced" : "changed"))
+      : (nowMatches ? "fixed" : "changed");
+    var title = expectationKind === "contract"
+      ? (nowMatches ? "Contrato atendido agora" : (sameStatus ? "Falha reproduzida" : "Resultado mudou"))
+      : (nowMatches ? "Request reproduzida" : "Resultado mudou");
+    var message = expectationKind === "contract"
+      ? (nowMatches
+        ? "O replay retornou " + replayed + ", dentro do contrato esperado."
+        : (sameStatus ? "A API retornou " + replayed + " novamente, mas o contrato exige " + replayRequestExpectedLabel(test, selectedRequest) + "." : "O replay retornou " + replayed + ", diferente do capturado " + original + "."))
+      : (nowMatches
+        ? "A request de preparacao retornou " + replayed + " novamente, igual ao capturado."
+        : "A request retornou " + replayed + ", diferente do capturado " + original + ".");
+    return '<div class="replay-diagnostic-card ' + e(alertClass) + '"><div class="replay-alert"><b>' + e(title) + '</b><span>' + e(message) + '</span></div>' +
+      replayMetricStripHtml(test, selectedRequest, entry) +
+      replayResponseCompareHtml(selectedRequest, response) +
+      '<p class="replay-note">Status HTTP: ' + e(replayed) + ' ' + e(response.statusText || replayStatusMeaning(response.status)) + '</p></div>';
+  }
+
+  function replayHtml(test, selectedRequest) {
+    if (!selectedRequest) {
+      return '<article class="card"><div class="card-body"><p class="diagnosis-body">Selecione uma request para reproduzir.</p></div></article>';
+    }
+    if (!localToken) {
+      return '<article class="card"><div class="card-body"><h3 class="diagnosis-title">Replay disponivel apenas no modo localhost</h3>' +
+        '<p class="diagnosis-body">Abra este relatorio com <code>npm run qa:debug:open</code>. O arquivo local aberto diretamente no navegador nao consegue chamar o servidor local do FailLens.</p></div></article>';
+    }
+    var key = replayKey(test, selectedRequest);
+    return '<div class="replay-v2" data-replay-shell data-replay-form="' + e(key) + '">' +
+      '<div class="replay-actionbar">' +
+      '<button class="replay-btn primary" data-replay-sequence>' + FASTFWD_ICON + '<span>Reproduzir sequencia</span></button>' +
+      '<button class="replay-btn" data-replay-send>' + svgIcon('<path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path>') + '<span>Enviar request</span></button>' +
+      '<button class="replay-btn muted" data-replay-culprit>' + svgIcon('<circle cx="12" cy="12" r="8"></circle><circle cx="12" cy="12" r="2"></circle>') + '<span>Ir para causadora</span></button>' +
+      '<button class="replay-btn reset" data-replay-reset>' + svgIcon('<path d="M4 4v6h6"></path><path d="M20 20v-6h-6"></path><path d="M6 9a7 7 0 0 1 11.8-2.2"></path><path d="M18 15a7 7 0 0 1-11.8 2.2"></path>') + '<span>Reiniciar</span></button></div>' +
+      '<div class="replay-v2-grid">' +
+      '<aside class="replay-collection"><div class="replay-section-head"><b>Sequencia capturada</b><span>' + (test.requests || []).length + ' chamadas</span></div>' +
+      '<div class="replay-request-list">' + replayRequestCollectionHtml(test) + '</div></aside>' +
+      '<section class="replay-editor"><div class="replay-section-head"><b>Request selecionada</b><span class="replay-cause-chip">' + (selectedRequest.id === test.mainRequestId ? "causadora" : e(PHASE_LABELS[selectedRequest.phase] || "chamada")) + '</span></div>' +
+      '<div class="replay-url-row"><select class="replay-input method" data-replay-method>' + methodOptions(selectedRequest.method || "GET") + '</select>' +
+      '<input class="replay-input url" data-replay-url value="' + e(selectedRequest.originalUrl || selectedRequest.url || "") + '">' +
+      '<span class="replay-expected">esperado ' + e(replayRequestExpectedLabel(test, selectedRequest)) + '</span></div>' +
+      replayInnerTabsHtml(test) + replayTabContentHtml(test, selectedRequest) + '</section>' +
+      '<aside class="replay-diagnostics"><div class="replay-section-head"><b>' + (replayState[key] ? "Resultado do replay" : "Diagnostico") + '</b><span>local</span></div>' +
+      replayResultHtml(test, selectedRequest) + '</aside></div></div>';
+  }
+
   function timelineHtml(test, selectedRequest, selectedContext) {
     var open = !!state.timelineOpen[test.id];
     var callFilter = state.callFilter[test.id] || "important";
@@ -741,6 +1036,7 @@ export const clientScript = String.raw`
     return '<nav class="debug-tabs" role="tablist" aria-label="Detalhes do teste">' +
       '<button id="detail-tab-diagnosis" class="debug-tab ' + (state.view === "diagnosis" ? 'active' : '') + '" data-detail-tab="diagnosis" role="tab" aria-selected="' + (state.view === "diagnosis") + '" aria-controls="detail-panel-diagnosis" tabindex="' + (state.view === "diagnosis" ? '0' : '-1') + '">' + e(diagnosisLabel) + '</button>' +
       '<button id="detail-tab-script" class="debug-tab ' + (state.view === "script" ? 'active' : '') + '" data-detail-tab="script" role="tab" aria-selected="' + (state.view === "script") + '" aria-controls="detail-panel-script" tabindex="' + (state.view === "script" ? '0' : '-1') + '">Reprodução</button>' +
+      '<button id="detail-tab-replay" class="debug-tab ' + (state.view === "replay" ? 'active' : '') + '" data-detail-tab="replay" role="tab" aria-selected="' + (state.view === "replay") + '" aria-controls="detail-panel-replay" tabindex="' + (state.view === "replay" ? '0' : '-1') + '">Replay</button>' +
       '<button id="detail-tab-evidence" class="debug-tab ' + (state.view === "evidence" ? 'active' : '') + '" data-detail-tab="evidence" role="tab" aria-selected="' + (state.view === "evidence") + '" aria-controls="detail-panel-evidence" tabindex="' + (state.view === "evidence" ? '0' : '-1') + '">Chamado</button></nav>';
   }
   function statusBadgeHtml(test) {
@@ -753,12 +1049,15 @@ export const clientScript = String.raw`
   function selectedPanel(test, selectedRequest, selectedContext, specPath, main, expected, actual) {
     var diagnosisView = state.view === "diagnosis";
     var scriptView = state.view === "script";
+    var replayView = state.view === "replay";
     var content;
     if (diagnosisView) {
       content = analysisSections(test, main, expected, actual) + timelineHtml(test, selectedRequest, selectedContext);
     } else if (scriptView) {
       content = '<div class="code-panel reproduction-code"><div class="code-head"><span class="lang-pill">cURL</span><span class="code-title">Script de reprodução</span><button class="copy-button code-copy" data-copy-kind="script" aria-label="Copiar script" title="Copiar script">Copiar script</button></div>' +
         '<pre>' + e(test.reproductionScript || "Nenhuma request disponível.") + '</pre></div>';
+    } else if (replayView) {
+      content = replayHtml(test, selectedRequest);
     } else {
       var issue = buildIssueContent(test, specPath, report.contracts || []);
       var screenshot = test.evidence && test.evidence.screenshots && test.evidence.screenshots[0];
@@ -882,6 +1181,105 @@ export const clientScript = String.raw`
     document.addEventListener("keydown", onKey);
   }
 
+  function replayParseHeaders(value) {
+    var headers = value ? JSON.parse(value) : {};
+    if (!headers || typeof headers !== "object" || Array.isArray(headers)) throw new Error("Headers precisam ser um objeto JSON.");
+    return headers;
+  }
+
+  function replayParseBody(value) {
+    if (!value) return undefined;
+    try { return JSON.parse(value); } catch (_) { return value; }
+  }
+
+  function replayPayloadFor(test, request, form) {
+    var methodField = form && form.querySelector("[data-replay-method]");
+    var urlField = form && form.querySelector("[data-replay-url]");
+    var headersField = form && form.querySelector("[data-replay-headers]");
+    var bodyField = form && form.querySelector("[data-replay-body]");
+    var method = methodField ? methodField.value : (request.method || "GET");
+    var url = urlField ? urlField.value : (request.originalUrl || request.url || "");
+    var headers = replayParseHeaders(headersField ? headersField.value.trim() : replayHeadersText(request, test));
+    var body = replayParseBody(bodyField ? bodyField.value.trim() : replayBodyText(request));
+    var token = replayTokenValue(test);
+    var hasAuthorization = Object.keys(headers).some(function (key) { return key.toLowerCase() === "authorization"; });
+    if (token && (hasAuthorization || (request.usedVariables || []).indexOf("$TOKEN") >= 0)) {
+      var authKey = Object.keys(headers).find(function (key) { return key.toLowerCase() === "authorization"; }) || "authorization";
+      headers[authKey] = /^Bearer\s+/i.test(token) ? token : "Bearer " + token;
+    }
+    return { method: method, url: url, headers: headers, body: body };
+  }
+
+  function sendReplayPayload(payload) {
+    return fetch("/__faillens/replay?token=" + encodeURIComponent(localToken), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).then(function (response) { return response.json(); });
+  }
+
+  function runReplayRequest(test, request, form) {
+    var key = replayKey(test, request);
+    var payload = replayPayloadFor(test, request, form);
+    replayState[key] = { loading: true };
+    renderDetail();
+    return sendReplayPayload(payload).then(function (result) {
+      var token = result && result.response ? findTokenValue(result.response.body) : "";
+      if (token) replayUi.tokenValue[replayScopeKey(test)] = token;
+      replayState[key] = result;
+      renderDetail();
+      return result;
+    }).catch(function (error) {
+      replayState[key] = { ok: false, error: error.message || String(error) };
+      renderDetail();
+      return replayState[key];
+    });
+  }
+
+  function runReplaySequence(item, form) {
+    var test = item.test;
+    var requests = test.requests || [];
+    var scope = replayScopeKey(test);
+    var mutates = requests.some(function (request) { return /^(POST|PUT|PATCH|DELETE)$/i.test(request.method || ""); });
+    if (mutates && !window.confirm("Esta sequencia pode alterar dados. Enviar replay mesmo assim?")) return;
+    replayUi.sequence[scope] = { loading: true, index: 0, done: Object.create(null) };
+    function next(index) {
+      if (index >= requests.length) {
+        replayUi.sequence[scope].loading = false;
+        replayUi.sequence[scope].index = requests.length;
+        renderDetail();
+        return Promise.resolve();
+      }
+      var request = requests[index];
+      replayUi.sequence[scope].index = index;
+      var selectedForm = request.id === state.requestId ? form : null;
+      replayState[replayKey(test, request)] = { loading: true };
+      renderDetail();
+      return sendReplayPayload(replayPayloadFor(test, request, selectedForm)).then(function (result) {
+        var token = result && result.response ? findTokenValue(result.response.body) : "";
+        if (token) replayUi.tokenValue[scope] = token;
+        replayState[replayKey(test, request)] = result;
+        replayUi.sequence[scope].done[request.id] = true;
+        return next(index + 1);
+      }).catch(function (error) {
+        replayState[replayKey(test, request)] = { ok: false, error: error.message || String(error) };
+        replayUi.sequence[scope].done[request.id] = true;
+        replayUi.sequence[scope].loading = false;
+        renderDetail();
+      });
+    }
+    next(0);
+  }
+
+  function resetReplay(test) {
+    (test.requests || []).forEach(function (request) { delete replayState[replayKey(test, request)]; });
+    var scope = replayScopeKey(test);
+    delete replayUi.sequence[scope];
+    delete replayUi.tokenEditing[scope];
+    delete replayUi.tokenValue[scope];
+    replayUi.tab[scope] = "body";
+  }
+
   filterInput.addEventListener("input", function (event) {
     state.query = event.target.value;
     renderSidebar();
@@ -979,6 +1377,69 @@ export const clientScript = String.raw`
       if (directRequest) copy(directRequest.curl || "", directCopy);
       return;
     }
+    var replayTabButton = event.target.closest("[data-replay-tab]");
+    if (replayTabButton) {
+      replayUi.tab[replayScopeKey(current.test)] = replayTabButton.dataset.replayTab;
+      renderDetail();
+      return;
+    }
+    var replayTokenEdit = event.target.closest("[data-replay-token-edit]");
+    if (replayTokenEdit) {
+      replayUi.tokenEditing[replayScopeKey(current.test)] = true;
+      replayUi.tab[replayScopeKey(current.test)] = "token";
+      renderDetail();
+      return;
+    }
+    var replayTokenCancel = event.target.closest("[data-replay-token-cancel]");
+    if (replayTokenCancel) {
+      replayUi.tokenEditing[replayScopeKey(current.test)] = false;
+      replayUi.tab[replayScopeKey(current.test)] = "token";
+      renderDetail();
+      return;
+    }
+    var replayTokenSave = event.target.closest("[data-replay-token-save]");
+    if (replayTokenSave) {
+      var tokenInput = replayTokenSave.closest("[data-replay-form]") && replayTokenSave.closest("[data-replay-form]").querySelector("[data-replay-token-input]");
+      replayUi.tokenValue[replayScopeKey(current.test)] = tokenInput ? tokenInput.value.trim() : "";
+      replayUi.tokenEditing[replayScopeKey(current.test)] = false;
+      replayUi.tab[replayScopeKey(current.test)] = "token";
+      renderDetail();
+      return;
+    }
+    var replayReset = event.target.closest("[data-replay-reset]");
+    if (replayReset) {
+      resetReplay(current.test);
+      renderDetail();
+      return;
+    }
+    var replayCulprit = event.target.closest("[data-replay-culprit]");
+    if (replayCulprit) {
+      state.requestId = current.test.mainRequestId || state.requestId;
+      replayUi.tab[replayScopeKey(current.test)] = "body";
+      renderDetail();
+      return;
+    }
+    var replaySequence = event.target.closest("[data-replay-sequence]");
+    if (replaySequence) {
+      var sequenceForm = replaySequence.closest("[data-replay-shell]");
+      runReplaySequence(current, sequenceForm);
+      return;
+    }
+    var replaySend = event.target.closest("[data-replay-send]");
+    if (replaySend) {
+      var replayRequest = current.test.requests.find(function (request) { return request.id === state.requestId; });
+      var form = replaySend.closest("[data-replay-form]");
+      if (!replayRequest || !form || !localToken) return;
+      try {
+        var payload = replayPayloadFor(current.test, replayRequest, form);
+        if (/^(POST|PUT|PATCH|DELETE)$/i.test(payload.method) && !window.confirm("Esta request pode alterar dados. Enviar replay mesmo assim?")) return;
+        runReplayRequest(current.test, replayRequest, form);
+      } catch (error) {
+        replayState[replayKey(current.test, replayRequest)] = { ok: false, error: error.message || String(error) };
+        renderDetail();
+      }
+      return;
+    }
     var tabButton = event.target.closest("[data-detail-tab]");
     if (tabButton) {
       state.view = tabButton.dataset.detailTab;
@@ -999,6 +1460,15 @@ export const clientScript = String.raw`
     else if (kind === "curl") copy(selectedRequest ? selectedRequest.curl : "", copyButton);
     else if (kind === "response") copy(selectedRequest ? json(selectedRequest.responseBody) : "", copyButton);
     else if (kind === "request") copy(selectedRequest ? json(selectedRequest.requestBody) : "", copyButton);
+    else if (kind === "captured-response") copy(selectedRequest ? json(selectedRequest.responseBody) : "", copyButton);
+    else if (kind === "replay-response") {
+      var replayResponse = selectedRequest ? replayState[replayKey(current.test, selectedRequest)] : null;
+      copy(replayResponse && replayResponse.response ? json(replayResponse.response.body) : "", copyButton);
+    }
+    else if (kind === "replay-headers") {
+      var replayHeaders = selectedRequest ? replayState[replayKey(current.test, selectedRequest)] : null;
+      copy(replayHeaders && replayHeaders.response ? json(replayHeaders.response.headers) : "", copyButton);
+    }
     else if (kind === "skip-reason") copy("Teste pulado: " + current.test.title, copyButton);
     else if (kind === "validations") copy((current.test.assertions || []).map(function (assertion) {
       return "[" + assertionState(assertion.state) + "] " + assertion.title + (assertion.message ? " — " + assertion.message : "");

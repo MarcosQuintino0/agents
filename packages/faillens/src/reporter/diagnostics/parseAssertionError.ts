@@ -1,4 +1,4 @@
-import { maskSensitiveData, maskSensitiveText, type MaskConfig } from "../../collector/sensitiveMask";
+import { hasMaskRules, maskSensitiveData, maskSensitiveText, type MaskConfig } from "../../collector/sensitiveMask";
 import type { FailLensError } from "../../types/report";
 
 function parseLiteral(value: string): unknown {
@@ -33,8 +33,13 @@ export function parseAssertionError(
     input && typeof input === "object"
       ? (input as Record<string, unknown>)
       : { message: String(input ?? "Erro desconhecido") };
-  const message = maskSensitiveText(String(raw.message ?? "Erro desconhecido"), maskConfig);
-  const stack = raw.stack ? maskSensitiveText(String(raw.stack), maskConfig) : undefined;
+  const shouldMask = hasMaskRules(maskConfig);
+  const message = shouldMask
+    ? maskSensitiveText(String(raw.message ?? "Erro desconhecido"), maskConfig)
+    : String(raw.message ?? "Erro desconhecido");
+  const stack = raw.stack
+    ? shouldMask ? maskSensitiveText(String(raw.stack), maskConfig) : String(raw.stack)
+    : undefined;
   const location = sourceLocation(stack);
   const result: FailLensError = {
     name: String(raw.name ?? (/assert/i.test(message) ? "AssertionError" : "Error")),
@@ -45,10 +50,12 @@ export function parseAssertionError(
     column: typeof raw.column === "number" ? raw.column : location.column,
   };
 
-  if (raw.expected !== undefined) result.expected = maskSensitiveData(raw.expected, maskConfig);
-  if (raw.actual !== undefined) result.actual = maskSensitiveData(raw.actual, maskConfig);
+  if (raw.expected !== undefined) result.expected = shouldMask ? maskSensitiveData(raw.expected, maskConfig) : raw.expected;
+  if (raw.actual !== undefined) result.actual = shouldMask ? maskSensitiveData(raw.actual, maskConfig) : raw.actual;
   if (raw.assertionMessage) {
-    result.assertionMessage = maskSensitiveText(String(raw.assertionMessage), maskConfig);
+    result.assertionMessage = shouldMask
+      ? maskSensitiveText(String(raw.assertionMessage), maskConfig)
+      : String(raw.assertionMessage);
   }
 
   const descriptive = message.match(/^(?:AssertionError:\s*)?(.+?):\s*expected\s+/i);

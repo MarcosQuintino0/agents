@@ -1,7 +1,8 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { createReadStream, promises as fs } from "node:fs";
-import { createServer, type ServerResponse } from "node:http";
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import path from "node:path";
+import { toJsonSafe } from "../utils/safeJson";
 
 export interface ReportServerOptions {
   reportDir: string;
@@ -59,6 +60,111 @@ function collectEvidencePaths(report: unknown): Set<string> {
   return allowed;
 }
 
+function writeJson(response: ServerResponse, status: number, payload: unknown): void {
+  writeSecurityHeaders(response, "application/json; charset=utf-8");
+  response.writeHead(status);
+  response.end(JSON.stringify(payload));
+}
+
+async function readJsonRequest(request: IncomingMessage, limit = 512 * 1024): Promise<unknown> {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of request) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    size += buffer.length;
+    if (size > limit) throw new Error("Payload de replay maior que o limite permitido.");
+    chunks.push(buffer);
+  }
+  const raw = Buffer.concat(chunks).toString("utf8").trim();
+  return raw ? JSON.parse(raw) : {};
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function normalizeReplayHeaders(value: unknown): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, item] of Object.entries(asRecord(value))) {
+    if (!/^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/.test(key)) continue;
+    if (/^(host|content-length|connection)$/i.test(key)) continue;
+    if (item === undefined || item === null) continue;
+    out[key] = String(item);
+  }
+  return out;
+}
+
+function assertReplayTarget(value: unknown): URL {
+  if (typeof value !== "string" || !value.trim()) throw new Error("URL de replay invalida.");
+  const parsed = new URL(value);
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new Error("Replay aceita apenas HTTP/HTTPS.");
+  const host = parsed.hostname.toLowerCase();
+  const localHosts = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
+  if (!localHosts.has(host)) {
+    throw new Error("Prototipo de replay aceita apenas localhost/127.0.0.1.");
+  }
+  return parsed;
+}
+
+async function replayRequest(payload: unknown): Promise<unknown> {
+  const input = asRecord(payload);
+  const method = String(input.method || "GET").toUpperCase();
+  if (!/^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)$/.test(method)) throw new Error("Metodo HTTP nao permitido para replay.");
+  const target = assertReplayTarget(input.url);
+  const headers = normalizeReplayHeaders(input.headers);
+  const body = input.body;
+  const started = Date.now();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30_000);
+  try {
+    const response = await fetch(target, {
+      method,
+      headers,
+      body: method === "GET" || method === "HEAD"
+        ? undefined
+        : body === undefined || body === null
+          ? undefined
+          : typeof body === "string"
+            ? body
+            : JSON.stringify(body),
+      signal: controller.signal,
+      redirect: "manual",
+    });
+    const contentType = response.headers.get("content-type") || "";
+    const text = await response.text();
+    let responseBody: unknown = text;
+    if (/json/i.test(contentType) && text) {
+      try { responseBody = JSON.parse(text); } catch { responseBody = text; }
+    }
+    return {
+      ok: true,
+      replayedAt: new Date().toISOString(),
+      request: {
+        method,
+        url: target.toString(),
+        headers,
+        body: toJsonSafe(body),
+      },
+      response: {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        body: toJsonSafe(responseBody),
+        durationMs: Date.now() - started,
+      },
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      replayedAt: new Date().toISOString(),
+      error: error instanceof Error ? error.message : String(error),
+      durationMs: Date.now() - started,
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function startReportServer(options: ReportServerOptions): Promise<ReportServer> {
   const host = "127.0.0.1";
   const reportDir = path.resolve(options.reportDir);
@@ -113,6 +219,15 @@ export async function startReportServer(options: ReportServerOptions): Promise<R
       if (!authorized) { response.writeHead(403).end("Forbidden"); return; }
       writeSecurityHeaders(response, "application/json; charset=utf-8");
       response.end(reportText);
+      return;
+    }
+    if (url.pathname === "/__faillens/replay") {
+      if (!authorized) { response.writeHead(403).end("Forbidden"); return; }
+      if (request.method !== "POST") { writeJson(response, 405, { ok: false, error: "Use POST para replay." }); return; }
+      void readJsonRequest(request)
+        .then((payload) => replayRequest(payload))
+        .then((result) => writeJson(response, 200, result))
+        .catch((error) => writeJson(response, 400, { ok: false, error: error instanceof Error ? error.message : String(error) }));
       return;
     }
     if (url.pathname === "/__faillens/events") {

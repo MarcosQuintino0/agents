@@ -34,7 +34,10 @@ Scripts recomendados:
 
 Saidas padrao:
   reports/faillens/index.html
-  reports/faillens/faillens-report.json`);
+  reports/faillens/faillens-report.json
+
+Para habilitar a aba Replay, abra o relatorio em localhost:
+  npm run qa:debug:open`);
 }
 
 function printRunHelp() {
@@ -43,7 +46,9 @@ function printRunHelp() {
   npm run qa:debug -- --open --spec "cypress/e2e/apis/users/**/*.cy.js"
 
 O comando executa Cypress com instrumentacao temporaria do FailLens e preserva o exit code do Cypress.
-Argumentos apos "run" sao encaminhados ao FailLens/Cypress.`);
+Argumentos apos "run" sao encaminhados ao FailLens/Cypress.
+
+Use --open para executar, gerar e abrir o relatorio em localhost, necessario para a aba Replay.`);
 }
 
 function printOpenHelp() {
@@ -53,6 +58,8 @@ function printOpenHelp() {
   npm run qa:debug:open -- --port 4317
 
 Abre o ultimo relatorio FailLens em um servidor local temporario em 127.0.0.1.`);
+  log(`
+Use este comando quando quiser usar a aba Replay. O HTML aberto via file:// e somente leitura.`);
 }
 
 function printGenerateHelp() {

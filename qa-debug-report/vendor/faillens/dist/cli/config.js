@@ -5,7 +5,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.loadFailLensConfig = loadFailLensConfig;
 const node_path_1 = __importDefault(require("node:path"));
-const sensitiveMask_1 = require("../collector/sensitiveMask");
 const fs_1 = require("../utils/fs");
 async function loadFailLensConfig(projectRoot) {
     const configPath = node_path_1.default.join(projectRoot, "faillens.config.js");
@@ -28,7 +27,7 @@ async function loadFailLensConfig(projectRoot) {
         // A detecção do Cypress emitirá a mensagem adequada se package.json não existir.
     }
     const outputDir = node_path_1.default.resolve(projectRoot, userConfig.outputDir || node_path_1.default.join("reports", "faillens"));
-    const maskFields = Array.from(new Set([...sensitiveMask_1.DEFAULT_MASK_FIELDS, ...(userConfig.maskFields || [])]));
+    const maskFields = Array.from(new Set(userConfig.maskFields || []));
     const maskPatterns = Array.from(new Set((userConfig.maskPatterns || []).map((pattern) => pattern instanceof RegExp ? `/${pattern.source}/${pattern.flags}` : String(pattern)).filter(Boolean)));
     return {
         outputDir,

@@ -78,8 +78,10 @@ test("summary contém todos os campos esperados", async () => {
   assert.ok(typeof s.passRate === "number");
 });
 
-test("dados sensíveis não aparecem no JSON", async () => {
-  const { content } = await buildAndGenerateJson([makeSpec()]);
+test("dados sensíveis não aparecem no JSON quando mascara configurada", async () => {
+  const { content } = await buildAndGenerateJson([makeSpec()], {
+    maskFields: ["authorization"],
+  });
   assert.doesNotMatch(content, /segredo/);
   assert.doesNotMatch(content, /senha-real/);
 });

@@ -149,7 +149,7 @@ function rawSpec() {
 }
 
 test("monta relatório, infere request principal, fase, variável e diagnóstico", () => {
-  const report = buildReportModel(rawSpec(), { config: { theme: "dark", maskFields: [] } });
+  const report = buildReportModel(rawSpec(), { config: { theme: "dark", maskFields: ["authorization"] } });
   const item = report.specs[0].tests[0];
   assert.equal(report.summary.failed, 1);
   assert.equal(report.summary.requests, 1);
@@ -165,9 +165,9 @@ test("monta relatório, infere request principal, fase, variável e diagnóstico
   assert.doesNotMatch(JSON.stringify(report), /segredo|"123"/);
 });
 
-test("gera HTML offline autocontido e sem segredos", async () => {
+test("gera HTML offline autocontido e sem segredos quando mascara configurada", async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "faillens-html-"));
-  const report = buildReportModel(rawSpec());
+  const report = buildReportModel(rawSpec(), { config: { maskFields: ["authorization"] } });
   const file = await generateHtml(report, directory);
   const html = await fs.readFile(file, "utf8");
   assert.match(html, /<!doctype html>/i);

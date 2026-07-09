@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FailLens Replay Sidebar v3</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #080c14;
+      --surface: #111722;
+      --surface-soft: #0c121d;
+      --code: #090e17;
+      --line: #202a3a;
+      --line-strong: #334154;
+      --text: #eef4ff;
+      --muted: #9ca8bb;
+      --faint: #68758a;
+      --accent: #18c7dd;
+      --accent-soft: rgba(24, 199, 221, .11);
+      --amber: #f5b848;
+      --amber-soft: rgba(245, 184, 72, .13);
+      --amber-line: rgba(245, 184, 72, .45);
+      --green: #27e39c;
+      --green-soft: rgba(39, 227, 156, .12);
+      --green-line: rgba(39, 227, 156, .38);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .shell {
+      width: min(430px, calc(100vw - 24px));
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface);
+    }
+
+    .head,
+    .json-head,
+    .split-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .head b {
+      font-size: 13px;
+      letter-spacing: 0;
+    }
+
+    .head span,
+    .json-head span,
+    .split-head span {
+      color: var(--faint);
+      font: 11px/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .alert {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border: 1px solid var(--amber-line);
+      border-radius: 7px;
+      background: var(--amber-soft);
+    }
+
+    .alert b {
+      display: block;
+      color: var(--amber);
+      font-size: 13px;
+      margin-bottom: 7px;
+    }
+
+    .alert p {
+      margin: 0;
+      color: var(--text);
+      font-size: 12.5px;
+      font-weight: 700;
+      line-height: 1.45;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      margin-top: 12px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--surface-soft);
+    }
+
+    .metric {
+      min-width: 0;
+      padding: 9px 10px;
+      border-left: 1px solid var(--line);
+    }
+
+    .metric:first-child { border-left: 0; }
+    .metric span {
+      display: block;
+      color: var(--faint);
+      font: 8px/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      text-transform: uppercase;
+    }
+    .metric strong {
+      display: block;
+      margin-top: 3px;
+      font: 700 13px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .compare {
+      margin-top: 18px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface-soft);
+    }
+
+    .segmented button {
+      min-width: 0;
+      border: 0;
+      border-radius: 6px;
+      padding: 8px 8px;
+      background: transparent;
+      color: var(--muted);
+      font: 700 11px/1.2 Inter, ui-sans-serif, system-ui, sans-serif;
+      cursor: pointer;
+    }
+
+    .segmented button.active {
+      background: var(--accent-soft);
+      color: var(--text);
+      box-shadow: inset 0 -2px 0 var(--accent);
+    }
+
+    .json-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--code);
+    }
+
+    .json-head {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      background: #0b111c;
+    }
+
+    .json-head b {
+      font-size: 11px;
+      color: var(--text);
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px 0;
+      color: var(--muted);
+      font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .pill {
+      padding: 3px 7px;
+      border: 1px solid var(--amber-line);
+      border-radius: 999px;
+      background: var(--amber-soft);
+      color: var(--amber);
+      font-weight: 800;
+    }
+
+    pre {
+      min-height: 228px;
+      max-height: 280px;
+      margin: 0;
+      padding: 14px;
+      overflow: auto;
+      color: #f3f6ff;
+      font: 700 11.5px/1.72 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: pre;
+    }
+
+    .diff-note {
+      display: grid;
+      gap: 5px;
+      padding: 10px 12px;
+      border: 1px solid var(--green-line);
+      border-radius: 8px;
+      background: var(--green-soft);
+    }
+
+    .diff-note b {
+      color: var(--green);
+      font-size: 11px;
+    }
+
+    .diff-note span {
+      color: var(--text);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .split-preview {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .split-preview .json-card pre {
+      min-height: 160px;
+      max-height: 180px;
+      font-size: 9.5px;
+      line-height: 1.6;
+      padding: 10px;
+      overflow: hidden;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .split-preview .json-head {
+      padding: 8px 9px;
+    }
+
+    @media (max-width: 390px) {
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+      .metric:nth-child(3) { border-left: 0; border-top: 1px solid var(--line); }
+      .metric:nth-child(4) { border-top: 1px solid var(--line); }
+      .split-preview { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <aside class="shell">
+    <div class="head">
+      <b>Resultado do replay</b>
+      <span>local</span>
+    </div>
+
+    <section class="alert">
+      <b>Falha reproduzida</b>
+      <p>A API retornou 400 novamente, mas o contrato exige 201.</p>
+    </section>
+
+    <section class="metrics" aria-label="Metricas do replay">
+      <div class="metric"><span>capturado</span><strong>400</strong></div>
+      <div class="metric"><span>esperado</span><strong>201</strong></div>
+      <div class="metric"><span>replay</span><strong>400</strong></div>
+      <div class="metric"><span>tempo</span><strong>4ms</strong></div>
+    </section>
+
+    <section class="compare">
+      <div class="json-head">
+        <b>Comparar respostas</b>
+        <span>JSON</span>
+      </div>
+
+      <div class="segmented" role="tablist" aria-label="Comparacao de JSON">
+        <button class="active" type="button" data-tab="original">Original capturado</button>
+        <button type="button" data-tab="replay">Replay agora</button>
+      </div>
+
+      <article class="json-card" data-panel="original">
+        <div class="status-row"><span class="pill">400</span><span>Capturado no teste quebrado</span></div>
+<pre>{
+  "error": {
+    "code": "validation_error",
+    "message": "Request validation failed",
+    "details": [
+      {
+        "field": "email",
+        "message": "email is required"
+      }
+    ]
+  }
+}</pre>
+      </article>
+
+      <article class="json-card" data-panel="replay" hidden>
+        <div class="status-row"><span class="pill">400</span><span>Resposta retornada no replay</span></div>
+<pre>{
+  "error": {
+    "code": "validation_error",
+    "message": "Request validation failed",
+    "details": [
+      {
+        "field": "email",
+        "message": "email is required"
+      }
+    ],
+    "traceId": "replay_82c1"
+  }
+}</pre>
+      </article>
+
+      <div class="diff-note">
+        <b>Comparacao</b>
+        <span>Status repetiu a falha. O replay adicionou <code>traceId</code>, mas o erro de contrato continua o mesmo.</span>
+      </div>
+
+      <div class="split-head">
+        <span>Visual rapido</span>
+        <span>original / replay</span>
+      </div>
+      <div class="split-preview" aria-label="JSON lado a lado">
+        <article class="json-card">
+          <div class="json-head"><b>Original</b><span>400</span></div>
+<pre>{
+  "error": {
+    "code": "validation_error",
+    "message": "Request validation failed"
+  }
+}</pre>
+        </article>
+        <article class="json-card">
+          <div class="json-head"><b>Replay</b><span>400</span></div>
+<pre>{
+  "error": {
+    "code": "validation_error",
+    "message": "Request validation failed",
+    "traceId": "replay_82c1"
+  }
+}</pre>
+        </article>
+      </div>
+    </section>
+  </aside>
+
+  <script>
+    document.querySelectorAll("[data-tab]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        document.querySelectorAll("[data-tab]").forEach(function (item) {
+          item.classList.toggle("active", item === button);
+        });
+        document.querySelectorAll("[data-panel]").forEach(function (panel) {
+          panel.hidden = panel.dataset.panel !== button.dataset.tab;
+        });
+      });
+    });
+  </script>
+</body>
+</html>

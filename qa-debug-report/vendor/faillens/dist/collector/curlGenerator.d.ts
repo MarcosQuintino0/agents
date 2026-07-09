@@ -5,5 +5,5 @@ export interface CurlInput {
     headers?: Record<string, unknown>;
     body?: unknown;
 }
-export declare function generateCurl(input: CurlInput, maskConfig?: MaskConfig): string;
+export declare function generateCurl(input: CurlInput, maskConfig?: MaskConfig | false): string;
 //# sourceMappingURL=curlGenerator.d.ts.map

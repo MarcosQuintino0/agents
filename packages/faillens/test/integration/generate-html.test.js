@@ -72,8 +72,10 @@ test("HTML não tem links externos — sem CDN, fontes, scripts externos", async
   assert.doesNotMatch(html, /cdn\./i);
 });
 
-test("dados sensíveis não aparecem no HTML após mascaramento", async () => {
-  const { html } = await buildAndGenerate([makeSpec([makeTest("t1")])]);
+test("dados sensíveis não aparecem no HTML quando mascara configurada", async () => {
+  const { html } = await buildAndGenerate([makeSpec([makeTest("t1")])], {
+    maskFields: ["authorization"],
+  });
   assert.doesNotMatch(html, /segredo-header/);
   assert.doesNotMatch(html, /segredo-body/);
   assert.doesNotMatch(html, /segredo-response/);
@@ -115,9 +117,9 @@ test("HTML contém as seções principais do relatório", async () => {
   assert.match(html, /redirect-trail/);
 });
 
-test("toolbar mantém as três abas na ordem, com ARIA e navegação por teclado", async () => {
+test("toolbar mantém as quatro abas na ordem, com ARIA e navegação por teclado", async () => {
   const { html } = await buildAndGenerate([makeSpec([makeTest("t1")])]);
-  assert.match(html, /role="tablist"[\s\S]*data-detail-tab="diagnosis"[\s\S]*data-detail-tab="script"[\s\S]*data-detail-tab="evidence"/);
+  assert.match(html, /role="tablist"[\s\S]*data-detail-tab="diagnosis"[\s\S]*data-detail-tab="script"[\s\S]*data-detail-tab="replay"[\s\S]*data-detail-tab="evidence"/);
   assert.match(html, /role="tab"/);
   assert.match(html, /aria-selected=/);
   assert.match(html, /ArrowRight|ArrowLeft/);

@@ -83,7 +83,7 @@ test("passRate calculado corretamente", () => {
 
 test("mascaramento aplicado a headers, body e URL do request", () => {
   const specs = [makeSpec("spec.cy.js", [makeFailedTest("t1")])];
-  const report = buildReportModel(specs, { config: { maskFields: [] } });
+  const report = buildReportModel(specs, { config: { maskFields: ["authorization"] } });
   const req = report.specs[0].tests[0].requests[0];
   assert.doesNotMatch(JSON.stringify(req.requestHeaders), /segredo-real/);
   assert.doesNotMatch(JSON.stringify(req.requestBody), /senha-real/);
@@ -276,7 +276,9 @@ test("metadados do projeto aplicados a partir da config", () => {
 });
 
 test("cURL gerado no request não contém segredos", () => {
-  const report = buildReportModel([makeSpec("spec.cy.js", [makeFailedTest("t1")])]);
+  const report = buildReportModel([makeSpec("spec.cy.js", [makeFailedTest("t1")])], {
+    config: { maskFields: ["authorization"] },
+  });
   const curl = report.specs[0].tests[0].requests[0].curl;
   assert.doesNotMatch(curl, /segredo-real/);
   assert.doesNotMatch(curl, /senha-real/);
@@ -288,7 +290,9 @@ test("redirects são preservados e URLs sensíveis são mascaradas", () => {
   test_.requests[0].redirects = [
     { statusCode: 302, location: "http://localhost:3333/next?token=segredo" },
   ];
-  const report = buildReportModel([makeSpec("spec.cy.js", [test_])]);
+  const report = buildReportModel([makeSpec("spec.cy.js", [test_])], {
+    config: { maskFields: ["authorization"] },
+  });
   assert.deepEqual(report.specs[0].tests[0].requests[0].redirects, [
     { statusCode: 302, location: "http://localhost:3333/next?token=***" },
   ]);

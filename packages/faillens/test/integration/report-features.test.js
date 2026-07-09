@@ -136,6 +136,25 @@ test("provas: drawer usa evidencias narrativas em vez de labels internos", async
   assert.doesNotMatch(doc, /Copiar provas/);
 });
 
+test("replay: tela v2 segue cliente HTTP com token editavel e resultado de falha sem verde enganoso", async () => {
+  const doc = await html();
+  assert.match(doc, /replay-v2/);
+  assert.match(doc, /data-replay-sequence/);
+  assert.match(doc, /function runReplaySequence/);
+  assert.match(doc, /data-replay-tab="token"/);
+  assert.match(doc, /data-replay-token-edit/);
+  assert.match(doc, /replay-metric-strip/);
+  assert.match(doc, /Comparacao de JSON/);
+  assert.match(doc, /Capturado no teste/);
+  assert.match(doc, /Replay agora/);
+  assert.match(doc, /data-copy-kind="captured-response"/);
+  assert.match(doc, /Falha reproduzida/);
+  assert.match(doc, /Contrato atendido agora/);
+  assert.match(doc, /\.replay-diagnostic-card\.reproduced \.replay-alert/);
+  assert.doesNotMatch(doc, /Erro reproduzido com sucesso/);
+  assert.doesNotMatch(doc, /file:\/\//);
+});
+
 // ─── Sem regressão de invariante ────────────────────────────────────────────
 
 test("standalone preservado: sem CDN, sem script/link externo", async () => {

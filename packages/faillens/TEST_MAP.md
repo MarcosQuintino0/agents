@@ -336,7 +336,7 @@ Se a instrumentação ganhar um contrato que `test/cli-run.test.js` não consiga
 - Sem CDN, fontes externas, `<link>` externo, `<script src=`
 - Dados sensíveis ausentes (mascarados antes)
 - Script de reprodução presente quando há requests
-- Três abas por teste, nesta ordem: `data-detail-tab="diagnosis"` (rotulada "Diagnóstico"/"Resultado"), `data-detail-tab="script"` (rotulada "Reprodução"), `data-detail-tab="evidence"` (rotulada "Chamado"). Testes pulados não mostram nenhuma aba.
+- Quatro abas por teste, nesta ordem: `data-detail-tab="diagnosis"` (rotulada "Diagnóstico"/"Resultado"), `data-detail-tab="script"` (rotulada "Reprodução"), `data-detail-tab="replay"` (rotulada "Replay"), `data-detail-tab="evidence"` (rotulada "Chamado"). Testes pulados não mostram nenhuma aba.
 - Destaque estrutural de divergência de payload via `.diff-token` (tokenizador `parseDiffPath`/`renderJsonNode`, não mais diff por linha inteira)
 - Timeline em accordion (`Linha do tempo das chamadas`, fechado por padrão) com filtro Principais/Todas (`data-call-filter`) — substituiu a antiga aba "Chamada selecionada" e o painel de sequência sempre visível
 - Resumo de persistência aparece somente para `confirmed-*` na comparação existente; não existe seção "Evidência de persistência"
@@ -363,6 +363,7 @@ Se a instrumentação ganhar um contrato que `test/cli-run.test.js` não consiga
 - Sucesso: asserções em 2 colunas (`successAssertions`, `pass-layout`, `assert-summary`)
 - Cards Esperado/Recebido: ampliar (`expand-btn` → `openModal`) + rolagem (`max-height: 340px`)
 - Drawer (`openDrawer`, `.drawer`/`.overlay`) para a lista completa de "Provas do diagnóstico" (`data-open-drawer="proofs"`)
+- Replay v2 (`replayHtml`, `runReplaySequence`, `.replay-v2`) com coleção de requests, abas internas `Token`/`Body`/`Headers`, edição de token em memória, execução da sequência e resultado "Falha reproduzida" em alerta quando a API continua fora do contrato
 
 ---
 

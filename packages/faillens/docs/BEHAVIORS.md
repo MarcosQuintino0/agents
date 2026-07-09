@@ -141,6 +141,10 @@ Testes falhos recebem `bddScenario`, construído sem IA a partir do modelo já s
 
 O HTML deve abrir offline e não pode usar CDN, scripts externos, fontes remotas, `fetch` ou importação dinâmica externa. Dados, fonte, CSS e JavaScript ficam embutidos.
 
+A aba **Replay** fica disponível no relatório, mas só executa requests quando o arquivo é servido por `faillens open`/`run --open`, com token local. A tela se comporta como um cliente HTTP compacto: lista a sequência capturada, permite alternar entre `Token`, `Body` e `Headers`, editar um token em memória da sessão e enviar a request selecionada ou a sequência inteira em ordem. Requests mutáveis (`POST`, `PUT`, `PATCH`, `DELETE`) pedem confirmação antes de sair do browser.
+
+O resultado do replay não usa verde para uma falha ainda presente. Quando o status atual repete o status capturado e continua fora do contrato esperado, a UI mostra **Falha reproduzida** em estado de alerta. Verde é reservado para o caso em que o replay passa a atender o contrato.
+
 - Implementação: `src/reporter/generateHtml.ts`, `src/templates/`
 - Testes: `test/integration/generate-html.test.js`, `test/integration/report-features.test.js`, `test/integration/visual-styling.test.js`
 

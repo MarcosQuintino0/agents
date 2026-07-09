@@ -69,6 +69,11 @@ function maskedValue(key: string, value: unknown): string {
   return "***";
 }
 
+export function hasMaskRules(config: MaskConfig = []): boolean {
+  const options = normalizeOptions(config);
+  return Boolean(options.fields.length || options.patterns.length);
+}
+
 export function isSensitiveField(key: string, extraFields: string[] = []): boolean {
   return sensitiveSet(extraFields).has(canonicalKey(key));
 }

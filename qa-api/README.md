@@ -129,6 +129,21 @@ reports/faillens/faillens-report.json
 `qa:debug` executa Cypress com instrumentação temporária do FailLens. Use esse relatório para
 debug, reprodução, evidências de falha e apoio a chamados. Não use como substituto de `qa:report`.
 
+Para usar a aba **Replay**, abra o relatorio em localhost com:
+
+```bash
+npm run qa:debug:open
+```
+
+Para executar os testes, gerar o relatorio e ja abrir em localhost, use:
+
+```bash
+npm run qa:debug -- --open --spec "cypress/e2e/apis/users/**/*.cy.js"
+```
+
+O arquivo `reports/faillens/index.html` aberto por `file://` continua util para leitura, mas nao
+permite reenviar requests pela aba Replay.
+
 Status de cobertura:
 
 - `aplicavel`: precisa de teste.
@@ -158,8 +173,8 @@ Estrutura esperada:
 ```text
 .agents/skills/
 - qa-api/
+- qa-api-fuzz/
 - qa-chamado/
 - qa-debug-report/
 - graphify/
 ```
-- qa-api-fuzz/

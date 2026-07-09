@@ -8,7 +8,7 @@ import type {
   TestState,
 } from "../types/report";
 import { generateCurl } from "./curlGenerator";
-import { maskSensitiveData, maskSensitiveText, maskUrl, type MaskConfig } from "./sensitiveMask";
+import { hasMaskRules, maskSensitiveData, maskSensitiveText, maskUrl, type MaskConfig } from "./sensitiveMask";
 import { parseAssertionError } from "../reporter/diagnostics/parseAssertionError";
 import { asRecord, clampNumber, createId } from "../utils/format";
 import type { PlannedTestAssertions } from "./extractSourceAssertions";
@@ -97,9 +97,11 @@ export class RequestStore {
   private currentTestId?: string;
   private currentSpecPath = "unknown-spec";
   private readonly maskConfig: MaskConfig;
+  private readonly shouldMask: boolean;
 
   constructor(maskFields: string[] = [], maskPatterns: string[] = []) {
     this.maskConfig = { fields: maskFields, patterns: maskPatterns };
+    this.shouldMask = hasMaskRules(this.maskConfig);
   }
 
   private getSpec(specPath = this.currentSpecPath): MutableSpec {
@@ -143,9 +145,13 @@ export class RequestStore {
       test = this.findTest(specPath, id)!;
     }
     const id = payload.id || createId("req");
-    const headers = maskSensitiveData(asRecord(payload.requestHeaders), this.maskConfig);
-    const body = maskSensitiveData(payload.requestBody ?? null, this.maskConfig);
-    const url = maskUrl(String(payload.url || ""), this.maskConfig);
+    const headers = this.shouldMask
+      ? maskSensitiveData(asRecord(payload.requestHeaders), this.maskConfig)
+      : asRecord(payload.requestHeaders);
+    const body = this.shouldMask
+      ? maskSensitiveData(payload.requestBody ?? null, this.maskConfig)
+      : payload.requestBody ?? null;
+    const url = this.shouldMask ? maskUrl(String(payload.url || ""), this.maskConfig) : String(payload.url || "");
     const request: FailLensRequest = {
       id,
       order: test.requests.length + 1,
@@ -153,7 +159,7 @@ export class RequestStore {
       method: String(payload.method || "GET").toUpperCase(),
       url,
       originalUrl: payload.originalUrl
-        ? maskUrl(String(payload.originalUrl), this.maskConfig)
+        ? this.shouldMask ? maskUrl(String(payload.originalUrl), this.maskConfig) : String(payload.originalUrl)
         : undefined,
       requestHeaders: headers,
       requestBody: body,
@@ -164,7 +170,7 @@ export class RequestStore {
       durationMs: 0,
       curl: generateCurl(
         { method: String(payload.method || "GET"), url, headers, body },
-        this.maskConfig,
+        this.shouldMask ? this.maskConfig : false,
       ),
     };
     test.requests.push(request);
@@ -177,12 +183,16 @@ export class RequestStore {
     if (!request) return null;
     request.receivedStatus =
       typeof payload.receivedStatus === "number" ? payload.receivedStatus : request.receivedStatus;
-    request.responseHeaders = maskSensitiveData(asRecord(payload.responseHeaders), this.maskConfig);
-    request.responseBody = maskSensitiveData(payload.responseBody ?? null, this.maskConfig);
+    request.responseHeaders = this.shouldMask
+      ? maskSensitiveData(asRecord(payload.responseHeaders), this.maskConfig)
+      : asRecord(payload.responseHeaders);
+    request.responseBody = this.shouldMask
+      ? maskSensitiveData(payload.responseBody ?? null, this.maskConfig)
+      : payload.responseBody ?? null;
     request.redirects = Array.isArray(payload.redirects)
       ? payload.redirects.map((redirect) => ({
           statusCode: typeof redirect.statusCode === "number" ? redirect.statusCode : undefined,
-          location: maskUrl(String(redirect.location || ""), this.maskConfig),
+          location: this.shouldMask ? maskUrl(String(redirect.location || ""), this.maskConfig) : String(redirect.location || ""),
         })).filter((redirect) => redirect.location)
       : undefined;
     request.durationMs = Math.max(0, clampNumber(payload.durationMs));
@@ -194,7 +204,7 @@ export class RequestStore {
         headers: request.requestHeaders,
         body: request.requestBody,
       },
-      this.maskConfig,
+      this.shouldMask ? this.maskConfig : false,
     );
     return null;
   }
@@ -208,13 +218,15 @@ export class RequestStore {
     if (Array.isArray(payload.assertions)) {
       test.assertions = payload.assertions.map((assertion, index) => ({
         id: String(assertion.id || `assertion-${index + 1}`),
-        title: maskSensitiveText(String(assertion.title || "Assertion observada"), this.maskConfig),
+        title: this.shouldMask
+          ? maskSensitiveText(String(assertion.title || "Assertion observada"), this.maskConfig)
+          : String(assertion.title || "Assertion observada"),
         state: normalizeAssertionState(assertion.state),
         message: assertion.message
-          ? maskSensitiveText(String(assertion.message), this.maskConfig)
+          ? this.shouldMask ? maskSensitiveText(String(assertion.message), this.maskConfig) : String(assertion.message)
           : undefined,
-        expected: maskSensitiveData(assertion.expected, this.maskConfig),
-        actual: maskSensitiveData(assertion.actual, this.maskConfig),
+        expected: this.shouldMask ? maskSensitiveData(assertion.expected, this.maskConfig) : assertion.expected,
+        actual: this.shouldMask ? maskSensitiveData(assertion.actual, this.maskConfig) : assertion.actual,
         file: assertion.file ? String(assertion.file) : undefined,
         line: typeof assertion.line === "number" ? assertion.line : undefined,
         column: typeof assertion.column === "number" ? assertion.column : undefined,
@@ -299,7 +311,7 @@ export class RequestStore {
   // resolução de regras acontecem em buildReportModel (visão de todos os specs).
   mergeContract(specPath: string, contract: FailLensContract | undefined): void {
     if (contract) {
-      this.getSpec(specPath).contract = maskSensitiveData(contract, this.maskConfig) as FailLensContract;
+      this.getSpec(specPath).contract = (this.shouldMask ? maskSensitiveData(contract, this.maskConfig) : contract) as FailLensContract;
     }
   }
 

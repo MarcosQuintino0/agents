@@ -10,7 +10,7 @@ Tudo roda na máquina ou no runner de CI. O FailLens não usa IA em runtime, nã
 - **Relatório offline:** HTML standalone com CSS, JS, dados e fontes embutidos.
 - **Debug acionável:** diagnóstico determinístico, linha do tempo, payload diff e reprodução em cURL.
 - **Evidência para dev:** aba de chamado com contexto, BDD, request/response, cURL, screenshot e rastreabilidade.
-- **Privacidade por padrão:** mascaramento antes da persistência e nenhum envio para serviços externos.
+- **Replay em ambiente controlado:** mantém payloads, headers e tokens no relatório para permitir reprodução fiel, sem envio para serviços externos.
 - **Biblioteca leve:** zero dependências de runtime; o pacote publicado depende só do Node.js e do Cypress do projeto consumidor.
 
 ## Instalação
@@ -162,6 +162,39 @@ npx faillens open --port 4317
 
 A porta é escolhida automaticamente quando `--port` não é informado. Use `--no-browser` para iniciar sem abrir o navegador padrão. Fechar a última aba encerra o processo; `Ctrl+C` também continua disponível.
 
+### Replay de request
+
+A aba **Replay** so funciona quando o relatorio esta aberto pelo visualizador local do FailLens,
+porque ela usa o servidor `127.0.0.1` para reenviar a request e evitar limitacoes de `file://` e CORS.
+
+Para gerar e ja abrir em localhost:
+
+```bash
+npx faillens run --open -- --spec "cypress/e2e/api/**/*.cy.js"
+```
+
+Para abrir em localhost um relatorio ja gerado:
+
+```bash
+npx faillens open
+```
+
+No pacote de skills, os comandos equivalentes sao:
+
+```bash
+npm run qa:debug -- --open --spec "cypress/e2e/apis/users/**/*.cy.js"
+npm run qa:debug:open
+```
+
+No modo `file://`, o relatorio continua abrindo para leitura, mas o Replay fica bloqueado. O replay
+nao roda automaticamente: o QA precisa clicar em **Enviar request** ou **Reproduzir sequencia**.
+Requests `POST`, `PUT`, `PATCH` e `DELETE` pedem confirmacao antes do envio. Nesta primeira versao,
+o replay aceita apenas alvos `localhost`/`127.0.0.1`.
+
+Em ambiente controlado, tokens, senhas de teste, headers e bodies ficam visiveis no JSON/HTML para
+permitir replay fiel. A aba **Token** mostra o token capturado e permite editar o valor antes de
+reenviar requests autenticadas.
+
 ### `faillens generate`
 
 Regenera somente o HTML a partir de um JSON FailLens existente:
@@ -172,7 +205,7 @@ npx faillens generate \
   --output reports/faillens/index.html
 ```
 
-O comando reaplica a máscara padrão antes de embutir dados no HTML.
+O comando reaplica somente mascaras opcionais configuradas antes de embutir dados no HTML.
 
 ## Relatório
 
@@ -214,19 +247,11 @@ Quando o FailLens enriquece o relatório, ele usa regras fixas:
 
 Se não houver evidência suficiente, o relatório degrada para texto neutro ou categoria `unknown`.
 
-## Máscara de dados sensíveis
+## Mascaras opcionais
 
-Antes de salvar JSON ou HTML, o FailLens mascara recursivamente headers, bodies, query params, erros e cURL.
-
-Campos padrão incluem:
-
-```text
-authorization, cookie, set-cookie, password, senha, token,
-accessToken, refreshToken, apiKey, secret, clientSecret,
-jwt, bearer, cpf, cnpj
-```
-
-Valores comuns viram `***`; um Authorization Bearer vira `Bearer <TOKEN>`. JWTs reconhecíveis também são substituídos.
+Por padrao, o FailLens nao mascara headers, bodies, tokens ou senhas de teste. Essa decisao favorece
+debug deterministico em ambientes controlados: o QA consegue reenviar a chamada exatamente como ela
+foi capturada.
 
 Campos adicionais podem ser definidos em `faillens.config.js`:
 
@@ -236,7 +261,7 @@ module.exports = {
 }
 ```
 
-A lista adicional complementa a proteção padrão; ela não a desativa.
+Quando `maskFields` e informado, esses campos passam a ser substituidos por `***`.
 
 Quando o segredo aparece dentro de um campo genérico, como `message`, `debug` ou `detail`, use `maskPatterns`. Cada padrão casa o trecho sensível que deve virar `***`:
 
@@ -249,7 +274,7 @@ module.exports = {
 }
 ```
 
-Os padrões são aplicados antes dos parciais, JSON, HTML, cURL, erros e chamado serem persistidos. Prefira padrões específicos do seu domínio para evitar mascarar texto útil demais.
+Os padroes sao aplicados antes dos parciais, JSON, HTML, cURL, erros e chamado serem persistidos. Prefira padroes especificos do seu dominio para evitar mascarar texto util demais.
 
 ## Configuração opcional
 

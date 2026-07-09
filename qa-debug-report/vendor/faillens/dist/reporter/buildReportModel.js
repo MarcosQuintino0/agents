@@ -14,6 +14,8 @@ const buildFacts_1 = require("./provenance/buildFacts");
 const resolveContracts_1 = require("./provenance/resolveContracts");
 // Mascara mensagens e textos do contrato antes de persistir (mask-before-persistence).
 function sanitizeContract(contract, maskConfig) {
+    if (!(0, sensitiveMask_1.hasMaskRules)(maskConfig))
+        return contract;
     const maskAttributes = (attributes) => {
         const out = {};
         for (const [key, value] of Object.entries(attributes)) {
@@ -109,6 +111,8 @@ function inferMainRequest(test, ruleRefs = []) {
 function maskError(error, maskConfig) {
     if (!error)
         return undefined;
+    if (!(0, sensitiveMask_1.hasMaskRules)(maskConfig))
+        return error;
     const parsed = (0, parseAssertionError_1.parseAssertionError)(error, maskConfig);
     return {
         ...parsed,
@@ -364,6 +368,17 @@ function buildReproductionScript(test, chain) {
     return lines.join("\n");
 }
 function sanitizeRequest(request, maskConfig) {
+    if (!(0, sensitiveMask_1.hasMaskRules)(maskConfig)) {
+        return {
+            ...request,
+            curl: (0, curlGenerator_1.generateCurl)({
+                method: request.method,
+                url: request.url,
+                headers: request.requestHeaders,
+                body: request.requestBody,
+            }, false),
+        };
+    }
     const sanitized = {
         ...request,
         url: (0, sensitiveMask_1.maskUrl)(request.url, maskConfig),
@@ -388,6 +403,13 @@ function sanitizeRequest(request, maskConfig) {
 }
 function prepareAssertions(source, error, maskConfig) {
     if (source.assertions?.length) {
+        if (!(0, sensitiveMask_1.hasMaskRules)(maskConfig)) {
+            return source.assertions.map((assertion, index) => ({
+                ...assertion,
+                id: assertion.id || `assertion-${index + 1}`,
+                title: assertion.title || "Assertion observada",
+            }));
+        }
         return source.assertions.map((assertion, index) => ({
             ...assertion,
             id: assertion.id || `assertion-${index + 1}`,

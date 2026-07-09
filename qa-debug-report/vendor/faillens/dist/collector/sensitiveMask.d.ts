@@ -4,6 +4,7 @@ export interface MaskOptions {
     patterns?: string[];
 }
 export type MaskConfig = string[] | MaskOptions;
+export declare function hasMaskRules(config?: MaskConfig): boolean;
 export declare function isSensitiveField(key: string, extraFields?: string[]): boolean;
 export declare function maskSensitiveData<T>(value: T, config?: MaskConfig): T;
 export declare function maskUrl(value: string, config?: MaskConfig): string;

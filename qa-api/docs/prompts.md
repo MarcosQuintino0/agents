@@ -62,6 +62,18 @@ Comando esperado quando o ambiente permitir:
 npm run qa:debug -- --spec "cypress/e2e/apis/<nome-da-api>/**/*.cy.js"
 ```
 
+Quando o objetivo for usar a aba **Replay** ou abrir o relatorio em localhost, use:
+
+```bash
+npm run qa:debug -- --open --spec "cypress/e2e/apis/<nome-da-api>/**/*.cy.js"
+```
+
+Para abrir em localhost um relatorio ja gerado:
+
+```bash
+npm run qa:debug:open
+```
+
 ## Criar chamados após análise
 
 Use a skill `qa-chamado`:

@@ -139,11 +139,11 @@ test("procedência — sem contrato e sem tags, relatório segue sem facts de co
   assert.equal(t.facts.some((f) => f.source === "contract"), false);
 });
 
-test("procedência — mensagem de regra é mascarada antes de virar fact", () => {
+test("procedência — mensagem de regra é mascarada antes de virar fact quando mascara configurada", () => {
   const report = buildReportModel([
     specWithContract([rule({ message: "use Bearer abc123def456ghi789 para autorizar" })]),
     specWithTest(failingTest([{ ruleId: "descricao-obrigatoria", resolved: false }])),
-  ]);
+  ], { config: { maskFields: ["authorization"] } });
   const t = report.specs.find((s) => s.specPath === "validacoes.cy.js").tests[0];
   const message = t.facts.find((f) => f.kind === "rule-message").value;
   assert.ok(!message.includes("abc123def456ghi789"), "token removido do fact");
@@ -405,8 +405,8 @@ test("procedência — mesmo ruleId em APIs diferentes resolve pelo diretório d
   assert.equal(resolved.ruleRefs[0].contractId, "alegacao-ans");
 });
 
-test("RequestStore mascara contrato antes do snapshot parcial", () => {
-  const store = new RequestStore([]);
+test("RequestStore mascara contrato antes do snapshot parcial quando mascara configurada", () => {
+  const store = new RequestStore(["authorization"]);
   store.mergeContract("spec.cy.js", contract([
     rule({ message: "use Bearer segredo123 para autorizar", raw: "message=Bearer segredo123" }),
   ]));

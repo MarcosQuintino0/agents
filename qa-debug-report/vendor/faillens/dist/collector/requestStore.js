@@ -39,8 +39,10 @@ class RequestStore {
     currentTestId;
     currentSpecPath = "unknown-spec";
     maskConfig;
+    shouldMask;
     constructor(maskFields = [], maskPatterns = []) {
         this.maskConfig = { fields: maskFields, patterns: maskPatterns };
+        this.shouldMask = (0, sensitiveMask_1.hasMaskRules)(this.maskConfig);
     }
     getSpec(specPath = this.currentSpecPath) {
         const key = specPath || "unknown-spec";
@@ -80,9 +82,13 @@ class RequestStore {
             test = this.findTest(specPath, id);
         }
         const id = payload.id || (0, format_1.createId)("req");
-        const headers = (0, sensitiveMask_1.maskSensitiveData)((0, format_1.asRecord)(payload.requestHeaders), this.maskConfig);
-        const body = (0, sensitiveMask_1.maskSensitiveData)(payload.requestBody ?? null, this.maskConfig);
-        const url = (0, sensitiveMask_1.maskUrl)(String(payload.url || ""), this.maskConfig);
+        const headers = this.shouldMask
+            ? (0, sensitiveMask_1.maskSensitiveData)((0, format_1.asRecord)(payload.requestHeaders), this.maskConfig)
+            : (0, format_1.asRecord)(payload.requestHeaders);
+        const body = this.shouldMask
+            ? (0, sensitiveMask_1.maskSensitiveData)(payload.requestBody ?? null, this.maskConfig)
+            : payload.requestBody ?? null;
+        const url = this.shouldMask ? (0, sensitiveMask_1.maskUrl)(String(payload.url || ""), this.maskConfig) : String(payload.url || "");
         const request = {
             id,
             order: test.requests.length + 1,
@@ -90,7 +96,7 @@ class RequestStore {
             method: String(payload.method || "GET").toUpperCase(),
             url,
             originalUrl: payload.originalUrl
-                ? (0, sensitiveMask_1.maskUrl)(String(payload.originalUrl), this.maskConfig)
+                ? this.shouldMask ? (0, sensitiveMask_1.maskUrl)(String(payload.originalUrl), this.maskConfig) : String(payload.originalUrl)
                 : undefined,
             requestHeaders: headers,
             requestBody: body,
@@ -99,7 +105,7 @@ class RequestStore {
             responseHeaders: {},
             responseBody: null,
             durationMs: 0,
-            curl: (0, curlGenerator_1.generateCurl)({ method: String(payload.method || "GET"), url, headers, body }, this.maskConfig),
+            curl: (0, curlGenerator_1.generateCurl)({ method: String(payload.method || "GET"), url, headers, body }, this.shouldMask ? this.maskConfig : false),
         };
         test.requests.push(request);
         return id;
@@ -111,12 +117,16 @@ class RequestStore {
             return null;
         request.receivedStatus =
             typeof payload.receivedStatus === "number" ? payload.receivedStatus : request.receivedStatus;
-        request.responseHeaders = (0, sensitiveMask_1.maskSensitiveData)((0, format_1.asRecord)(payload.responseHeaders), this.maskConfig);
-        request.responseBody = (0, sensitiveMask_1.maskSensitiveData)(payload.responseBody ?? null, this.maskConfig);
+        request.responseHeaders = this.shouldMask
+            ? (0, sensitiveMask_1.maskSensitiveData)((0, format_1.asRecord)(payload.responseHeaders), this.maskConfig)
+            : (0, format_1.asRecord)(payload.responseHeaders);
+        request.responseBody = this.shouldMask
+            ? (0, sensitiveMask_1.maskSensitiveData)(payload.responseBody ?? null, this.maskConfig)
+            : payload.responseBody ?? null;
         request.redirects = Array.isArray(payload.redirects)
             ? payload.redirects.map((redirect) => ({
                 statusCode: typeof redirect.statusCode === "number" ? redirect.statusCode : undefined,
-                location: (0, sensitiveMask_1.maskUrl)(String(redirect.location || ""), this.maskConfig),
+                location: this.shouldMask ? (0, sensitiveMask_1.maskUrl)(String(redirect.location || ""), this.maskConfig) : String(redirect.location || ""),
             })).filter((redirect) => redirect.location)
             : undefined;
         request.durationMs = Math.max(0, (0, format_1.clampNumber)(payload.durationMs));
@@ -127,7 +137,7 @@ class RequestStore {
             url: request.url,
             headers: request.requestHeaders,
             body: request.requestBody,
-        }, this.maskConfig);
+        }, this.shouldMask ? this.maskConfig : false);
         return null;
     }
     setTestResult(payload) {
@@ -141,13 +151,15 @@ class RequestStore {
         if (Array.isArray(payload.assertions)) {
             test.assertions = payload.assertions.map((assertion, index) => ({
                 id: String(assertion.id || `assertion-${index + 1}`),
-                title: (0, sensitiveMask_1.maskSensitiveText)(String(assertion.title || "Assertion observada"), this.maskConfig),
+                title: this.shouldMask
+                    ? (0, sensitiveMask_1.maskSensitiveText)(String(assertion.title || "Assertion observada"), this.maskConfig)
+                    : String(assertion.title || "Assertion observada"),
                 state: normalizeAssertionState(assertion.state),
                 message: assertion.message
-                    ? (0, sensitiveMask_1.maskSensitiveText)(String(assertion.message), this.maskConfig)
+                    ? this.shouldMask ? (0, sensitiveMask_1.maskSensitiveText)(String(assertion.message), this.maskConfig) : String(assertion.message)
                     : undefined,
-                expected: (0, sensitiveMask_1.maskSensitiveData)(assertion.expected, this.maskConfig),
-                actual: (0, sensitiveMask_1.maskSensitiveData)(assertion.actual, this.maskConfig),
+                expected: this.shouldMask ? (0, sensitiveMask_1.maskSensitiveData)(assertion.expected, this.maskConfig) : assertion.expected,
+                actual: this.shouldMask ? (0, sensitiveMask_1.maskSensitiveData)(assertion.actual, this.maskConfig) : assertion.actual,
                 file: assertion.file ? String(assertion.file) : undefined,
                 line: typeof assertion.line === "number" ? assertion.line : undefined,
                 column: typeof assertion.column === "number" ? assertion.column : undefined,
@@ -231,7 +243,7 @@ class RequestStore {
     // resolução de regras acontecem em buildReportModel (visão de todos os specs).
     mergeContract(specPath, contract) {
         if (contract) {
-            this.getSpec(specPath).contract = (0, sensitiveMask_1.maskSensitiveData)(contract, this.maskConfig);
+            this.getSpec(specPath).contract = (this.shouldMask ? (0, sensitiveMask_1.maskSensitiveData)(contract, this.maskConfig) : contract);
         }
     }
     // Liga cada teste às suas tags: vínculo @regra:<id> (ruleRefs, resolvido depois

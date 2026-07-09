@@ -1,4 +1,4 @@
-"use strict";
+﻿"use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const os = require("node:os");
@@ -6,7 +6,6 @@ const path = require("node:path");
 const fs = require("node:fs/promises");
 
 const { loadFailLensConfig } = require("../../dist/cli/config");
-const { DEFAULT_MASK_FIELDS } = require("../../dist/collector/sensitiveMask");
 
 async function makeTmpDir() {
   return fs.mkdtemp(path.join(os.tmpdir(), "faillens-config-"));
@@ -20,12 +19,12 @@ async function writePackageJson(dir, name) {
   await fs.writeFile(path.join(dir, "package.json"), JSON.stringify({ name }));
 }
 
-test("sem faillens.config.js — usa defaults", async () => {
+test("sem faillens.config.js â€” usa defaults", async () => {
   const dir = await makeTmpDir();
   const config = await loadFailLensConfig(dir);
   assert.ok(config.outputDir.endsWith(path.join("reports", "faillens")));
   assert.equal(config.theme, "dark");
-  assert.ok(Array.isArray(config.maskFields) && config.maskFields.length > 0);
+  assert.deepEqual(config.maskFields, []);
   assert.equal(config.projectName, undefined);
   assert.equal(config.runId, undefined);
   assert.equal(config.branch, undefined);
@@ -38,7 +37,7 @@ test("outputDir default resolve relativo ao projectRoot", async () => {
   assert.ok(config.outputDir.startsWith(dir));
 });
 
-test("outputDir customizado é resolvido para absoluto", async () => {
+test("outputDir customizado Ã© resolvido para absoluto", async () => {
   const dir = await makeTmpDir();
   await writeConfig(dir, 'module.exports = { outputDir: "custom/reports" };\n');
   const config = await loadFailLensConfig(dir);
@@ -53,27 +52,20 @@ test("theme light preservado", async () => {
   assert.equal(config.theme, "light");
 });
 
-test("theme inválido resulta em dark", async () => {
+test("theme invÃ¡lido resulta em dark", async () => {
   const dir = await makeTmpDir();
   await writeConfig(dir, 'module.exports = { theme: "blue" };\n');
   const config = await loadFailLensConfig(dir);
   assert.equal(config.theme, "dark");
 });
 
-test("maskFields customizados são MERGEADOS com os padrão (sem duplicatas)", async () => {
+test("maskFields customizados sao aplicados sem mascaras padrao implicitas", async () => {
   const dir = await makeTmpDir();
-  await writeConfig(dir, 'module.exports = { maskFields: ["sessionId", "privateKey"] };\n');
+  await writeConfig(dir, 'module.exports = { maskFields: ["sessionId", "privateKey", "sessionId"] };\n');
   const config = await loadFailLensConfig(dir);
-  assert.ok(config.maskFields.includes("sessionId"));
-  assert.ok(config.maskFields.includes("privateKey"));
-  for (const field of DEFAULT_MASK_FIELDS) {
-    assert.ok(config.maskFields.includes(field), `Campo padrão ${field} deve estar presente`);
-  }
-  const unique = new Set(config.maskFields);
-  assert.equal(unique.size, config.maskFields.length, "Não deve ter campos duplicados");
+  assert.deepEqual(config.maskFields, ["sessionId", "privateKey"]);
 });
-
-test("maskPatterns são normalizados para strings serializáveis", async () => {
+test("maskPatterns sÃ£o normalizados para strings serializÃ¡veis", async () => {
   const dir = await makeTmpDir();
   await writeConfig(dir, 'module.exports = { maskPatterns: ["recovery-code=[A-Z0-9-]+", /otp-[a-z0-9]+/i] };\n');
   const config = await loadFailLensConfig(dir);
@@ -122,7 +114,7 @@ test("cypressConfigFile customizado preservado", async () => {
   assert.equal(config.cypressConfigFile, "cypress.custom.js");
 });
 
-test("faillens.config.js com sintaxe inválida — lança erro com mensagem útil", async () => {
+test("faillens.config.js com sintaxe invÃ¡lida â€” lanÃ§a erro com mensagem Ãºtil", async () => {
   const dir = await makeTmpDir();
   await writeConfig(dir, "module.exports = { invalid json };\n");
   await assert.rejects(
@@ -131,7 +123,7 @@ test("faillens.config.js com sintaxe inválida — lança erro com mensagem úti
   );
 });
 
-test("config com export default (ESM-style) — carregada corretamente", async () => {
+test("config com export default (ESM-style) â€” carregada corretamente", async () => {
   const dir = await makeTmpDir();
   await writeConfig(dir, 'module.exports = { default: { theme: "light", projectName: "esm-proj" } };\n');
   const config = await loadFailLensConfig(dir);

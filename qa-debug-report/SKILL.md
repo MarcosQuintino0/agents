@@ -44,12 +44,35 @@ reports/faillens/faillens-report.json
 
 O HTML e o JSON sao artefatos locais do consumidor. Nao copie esses arquivos para dentro das skills.
 
+## Replay
+
+A aba **Replay** reenvia manualmente uma request capturada usando o servidor local do FailLens. Para
+usar Replay, abra o relatorio em localhost:
+
+```bash
+npm run qa:debug:open
+```
+
+Ou execute os testes e ja abra o relatorio:
+
+```bash
+npm run qa:debug -- --open --spec "cypress/e2e/apis/users/**/*.cy.js"
+```
+
+O arquivo `reports/faillens/index.html` aberto por `file://` serve para leitura, mas nao consegue
+reenviar requests. Replay nao roda automaticamente; o QA precisa clicar em **Enviar request** ou
+**Reproduzir sequencia**.
+
+Em ambiente controlado, o relatorio mantem tokens, senhas de teste, headers e bodies para permitir
+replay fiel. A aba **Token** mostra o token capturado e permite editar o valor antes de reenviar
+requests autenticadas.
+
 ## Regras
 
 - Rode `qa:debug` somente quando o usuario pedir execucao/debug ou quando houver autorizacao clara para executar Cypress.
 - Nao execute `qa:debug` automaticamente ao final da criacao de suites.
 - Nao use `qa:debug` como substituto de `qa:report`; eles respondem perguntas diferentes.
-- Nao exponha tokens, cookies, senhas ou Authorization em respostas, chamados ou logs.
+- Nao envie relatorios com tokens, cookies, senhas ou Authorization para fora do ambiente controlado.
 - Use o JSON FailLens como evidencia observada, nao como contrato final.
 - Se o usuario pedir chamado e existir `reports/faillens/faillens-report.json`, use `qa-chamado` para transformar as evidencias em ticket.
 

@@ -1,6 +1,5 @@
 import path from "node:path";
 import type { FailLensConfig, ResolvedFailLensConfig } from "../types/config";
-import { DEFAULT_MASK_FIELDS } from "../collector/sensitiveMask";
 import { pathExists, readJsonFile } from "../utils/fs";
 
 interface ProjectManifest {
@@ -28,7 +27,7 @@ export async function loadFailLensConfig(projectRoot: string): Promise<ResolvedF
     // A detecção do Cypress emitirá a mensagem adequada se package.json não existir.
   }
   const outputDir = path.resolve(projectRoot, userConfig.outputDir || path.join("reports", "faillens"));
-  const maskFields = Array.from(new Set([...DEFAULT_MASK_FIELDS, ...(userConfig.maskFields || [])]));
+  const maskFields = Array.from(new Set(userConfig.maskFields || []));
   const maskPatterns = Array.from(new Set((userConfig.maskPatterns || []).map((pattern) =>
     pattern instanceof RegExp ? `/${pattern.source}/${pattern.flags}` : String(pattern),
   ).filter(Boolean)));

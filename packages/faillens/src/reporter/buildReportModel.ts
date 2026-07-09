@@ -1,5 +1,5 @@
 import { generateCurl } from "../collector/curlGenerator";
-import { maskSensitiveData, maskSensitiveText, maskUrl, type MaskConfig } from "../collector/sensitiveMask";
+import { hasMaskRules, maskSensitiveData, maskSensitiveText, maskUrl, type MaskConfig } from "../collector/sensitiveMask";
 import type { ResolvedFailLensConfig } from "../types/config";
 import type {
   FailLensError,
@@ -22,6 +22,7 @@ import type { FailLensContract, FailLensRuleRef } from "../types/report";
 
 // Mascara mensagens e textos do contrato antes de persistir (mask-before-persistence).
 function sanitizeContract(contract: FailLensContract, maskConfig: MaskConfig): FailLensContract {
+  if (!hasMaskRules(maskConfig)) return contract;
   const maskAttributes = (attributes: Record<string, string | number | boolean>) => {
     const out: Record<string, string | number | boolean> = {};
     for (const [key, value] of Object.entries(attributes)) {
@@ -127,6 +128,7 @@ export function inferMainRequest(test: FailLensTest, ruleRefs: FailLensRuleRef[]
 
 function maskError(error: FailLensError | undefined, maskConfig: MaskConfig): FailLensError | undefined {
   if (!error) return undefined;
+  if (!hasMaskRules(maskConfig)) return error;
   const parsed = parseAssertionError(error, maskConfig);
   return {
     ...parsed,
@@ -392,6 +394,17 @@ function buildReproductionScript(test: FailLensTest, chain: RequestChain): strin
 }
 
 function sanitizeRequest(request: FailLensRequest, maskConfig: MaskConfig): FailLensRequest {
+  if (!hasMaskRules(maskConfig)) {
+    return {
+      ...request,
+      curl: generateCurl({
+        method: request.method,
+        url: request.url,
+        headers: request.requestHeaders,
+        body: request.requestBody,
+      }, false),
+    };
+  }
   const sanitized: FailLensRequest = {
     ...request,
     url: maskUrl(request.url, maskConfig),
@@ -424,6 +437,13 @@ function prepareAssertions(
   maskConfig: MaskConfig,
 ): FailLensAssertion[] {
   if (source.assertions?.length) {
+    if (!hasMaskRules(maskConfig)) {
+      return source.assertions.map((assertion, index) => ({
+        ...assertion,
+        id: assertion.id || `assertion-${index + 1}`,
+        title: assertion.title || "Assertion observada",
+      }));
+    }
     return source.assertions.map((assertion, index) => ({
       ...assertion,
       id: assertion.id || `assertion-${index + 1}`,

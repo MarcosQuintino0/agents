@@ -9,3 +9,5 @@ npm-debug.log*
 graphify-out/
 reports/
 .faillens/
+.venv-docs/
+site/

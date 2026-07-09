@@ -102,7 +102,7 @@ test("run instrumenta consumidor, gera os dois relatórios e preserva exit code"
   assert.doesNotMatch(JSON.stringify(report.specs[0].tests[0].assertions), /Login deve retornar 200/);
   assert.equal(report.specs[0].tests[0].diagnosis.category, "validation-not-applied");
   assert.deepEqual(report.specs[0].tests[0].requests[0].redirects, [
-    { statusCode: 302, location: "http://localhost:3333/next?token=***" },
+    { statusCode: 302, location: "http://localhost:3333/next?token=real" },
   ]);
   assert.deepEqual(report.specs[0].tests[0].evidence.screenshots[0], {
     relativePath: "cypress/screenshots/api.cy.js/Suite -- falha (failed).png",
@@ -116,6 +116,6 @@ test("run instrumenta consumidor, gera os dois relatórios e preserva exit code"
     kind: "failure",
   });
   assert.doesNotMatch(JSON.stringify(report.specs[0].tests[0].evidence), /faillens-consumer-|[A-Z]:\\/i);
-  assert.doesNotMatch(JSON.stringify(report), /Bearer real|password":"real/);
+  assert.match(JSON.stringify(report), /Bearer real|password":"real/);
   assert.match(html, /FailLens/);
 });

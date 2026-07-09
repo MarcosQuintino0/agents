@@ -2,6 +2,42 @@
 
 Pacote instalador das skills `qa-api`, `qa-api-fuzz`, `qa-chamado`, `qa-debug-report` e `graphify`.
 
+## Documentacao
+
+Este repositorio possui um portal MkDocs com a visao do ecossistema, paginas por skill, guias de uso,
+referencias de comandos e documentacao do FailLens.
+
+Instale as dependencias de documentacao em um ambiente Python isolado:
+
+```bash
+python -m venv .venv-docs
+source .venv-docs/bin/activate
+python -m pip install -r requirements-docs.txt
+```
+
+No Windows PowerShell:
+
+```powershell
+py -m venv .venv-docs
+.\.venv-docs\Scripts\Activate.ps1
+python -m pip install -r requirements-docs.txt
+```
+
+Rode localmente:
+
+```bash
+npm run docs:serve
+```
+
+Os scripts `docs:*` procuram o MkDocs dentro de `.venv-docs`, entao nao e necessario manter o
+ambiente virtual ativado depois da instalacao.
+
+Valide o build:
+
+```bash
+npm run docs:build
+```
+
 ## Instalacao Recomendada
 
 ```bash

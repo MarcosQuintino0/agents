@@ -7,16 +7,22 @@ export interface CurlInput {
   body?: unknown;
 }
 
-function shellQuote(value: string): string {
-  return `'${value.replace(/'/g, `'\\''`)}'`;
+function shellText(value: string): string {
+  return value.replace(/[\u0000-\u001f\u007f\u2028\u2029]+/g, " ");
 }
 
-export function generateCurl(input: CurlInput, maskConfig: MaskConfig = []): string {
+function shellQuote(value: string): string {
+  return `'${shellText(value).replace(/'/g, `'\\''`)}'`;
+}
+
+export function generateCurl(input: CurlInput, maskConfig: MaskConfig | false = []): string {
   const method = (input.method || "GET").toUpperCase();
   const methodArgument = /^[A-Z0-9-]+$/.test(method) ? method : shellQuote(method);
-  const url = maskUrl(input.url, maskConfig);
-  const headers = maskSensitiveData(input.headers ?? {}, maskConfig);
-  const body = maskSensitiveData(input.body, maskConfig);
+  const shouldMask = maskConfig !== false;
+  const effectiveMaskConfig = maskConfig || [];
+  const url = shouldMask ? maskUrl(input.url, effectiveMaskConfig) : input.url;
+  const headers = shouldMask ? maskSensitiveData(input.headers ?? {}, effectiveMaskConfig) : input.headers ?? {};
+  const body = shouldMask ? maskSensitiveData(input.body, effectiveMaskConfig) : input.body;
   const lines = [`curl -X ${methodArgument} ${shellQuote(url)}`];
 
   for (const [name, value] of Object.entries(headers)) {

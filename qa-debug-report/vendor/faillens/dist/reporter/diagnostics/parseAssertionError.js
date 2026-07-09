@@ -31,8 +31,13 @@ function parseAssertionError(input, maskConfig = []) {
     const raw = input && typeof input === "object"
         ? input
         : { message: String(input ?? "Erro desconhecido") };
-    const message = (0, sensitiveMask_1.maskSensitiveText)(String(raw.message ?? "Erro desconhecido"), maskConfig);
-    const stack = raw.stack ? (0, sensitiveMask_1.maskSensitiveText)(String(raw.stack), maskConfig) : undefined;
+    const shouldMask = (0, sensitiveMask_1.hasMaskRules)(maskConfig);
+    const message = shouldMask
+        ? (0, sensitiveMask_1.maskSensitiveText)(String(raw.message ?? "Erro desconhecido"), maskConfig)
+        : String(raw.message ?? "Erro desconhecido");
+    const stack = raw.stack
+        ? shouldMask ? (0, sensitiveMask_1.maskSensitiveText)(String(raw.stack), maskConfig) : String(raw.stack)
+        : undefined;
     const location = sourceLocation(stack);
     const result = {
         name: String(raw.name ?? (/assert/i.test(message) ? "AssertionError" : "Error")),
@@ -43,11 +48,13 @@ function parseAssertionError(input, maskConfig = []) {
         column: typeof raw.column === "number" ? raw.column : location.column,
     };
     if (raw.expected !== undefined)
-        result.expected = (0, sensitiveMask_1.maskSensitiveData)(raw.expected, maskConfig);
+        result.expected = shouldMask ? (0, sensitiveMask_1.maskSensitiveData)(raw.expected, maskConfig) : raw.expected;
     if (raw.actual !== undefined)
-        result.actual = (0, sensitiveMask_1.maskSensitiveData)(raw.actual, maskConfig);
+        result.actual = shouldMask ? (0, sensitiveMask_1.maskSensitiveData)(raw.actual, maskConfig) : raw.actual;
     if (raw.assertionMessage) {
-        result.assertionMessage = (0, sensitiveMask_1.maskSensitiveText)(String(raw.assertionMessage), maskConfig);
+        result.assertionMessage = shouldMask
+            ? (0, sensitiveMask_1.maskSensitiveText)(String(raw.assertionMessage), maskConfig)
+            : String(raw.assertionMessage);
     }
     const descriptive = message.match(/^(?:AssertionError:\s*)?(.+?):\s*expected\s+/i);
     if (descriptive && !result.assertionMessage)
