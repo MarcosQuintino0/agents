@@ -7,7 +7,7 @@ import process from "process";
 import { fileURLToPath } from "url";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const defaultSkills = ["qa-api", "qa-chamado", "qa-debug-report", "graphify"];
+const defaultSkills = ["qa-api", "qa-api-fuzz", "qa-chamado", "qa-debug-report", "graphify"];
 const defaultTarget = path.join(".agents", "skills");
 const defaultBackend = "../backend";
 
@@ -42,7 +42,7 @@ function printInstallHelp() {
 
 Opcoes:
   --target <dir>             Pasta de destino das skills (padrao: .agents/skills)
-  --skills <lista>           Skills separadas por virgula (padrao: qa-api,qa-chamado,qa-debug-report,graphify)
+  --skills <lista>           Skills separadas por virgula (padrao: qa-api,qa-api-fuzz,qa-chamado,qa-debug-report,graphify)
   --backend <dir>            Caminho do backend nos scripts qa:reindex (padrao: ../backend)
   --skip-graphify            Copia as skills sem instalar/validar Graphify CLI
   --force-graphify           Reinstala Graphify quando a versao encontrada for diferente
@@ -354,6 +354,10 @@ function configurePackageScripts(projectRoot, targetDir, backend, skills) {
   const installedSkills = new Set(skills);
   const reindexTool = path.relative(projectRoot, path.join(targetDir, "qa-api", "tools", "qa-reindex.mjs"));
   const reportTool = path.relative(projectRoot, path.join(targetDir, "qa-api", "tools", "qa-report.mjs"));
+  const fuzzTool = path.relative(projectRoot, path.join(targetDir, "qa-api-fuzz", "scripts", "qa-fuzz.mjs"));
+  const fuzzProfileTool = path.relative(projectRoot, path.join(targetDir, "qa-api-fuzz", "scripts", "qa-fuzz-profile.mjs"));
+  const fuzzLintTool = path.relative(projectRoot, path.join(targetDir, "qa-api-fuzz", "scripts", "qa-fuzz-lint.mjs"));
+  const fuzzReplayTool = path.relative(projectRoot, path.join(targetDir, "qa-api-fuzz", "scripts", "qa-fuzz-replay.mjs"));
   const debugTool = path.relative(projectRoot, path.join(targetDir, "qa-debug-report", "tools", "qa-debug-report.mjs"));
   const scripts = {};
 
@@ -361,6 +365,13 @@ function configurePackageScripts(projectRoot, targetDir, backend, skills) {
     scripts["qa:reindex"] = scriptValue(reindexTool, `--backend "${toPosix(backend)}"`);
     scripts["qa:reindex:check"] = scriptValue(reindexTool, "--check");
     scripts["qa:report"] = scriptValue(reportTool);
+  }
+
+  if (installedSkills.has("qa-api-fuzz")) {
+    scripts["qa:fuzz"] = scriptValue(fuzzTool);
+    scripts["qa:fuzz:profile"] = scriptValue(fuzzProfileTool);
+    scripts["qa:fuzz:lint"] = scriptValue(fuzzLintTool);
+    scripts["qa:fuzz:replay"] = scriptValue(fuzzReplayTool);
   }
 
   if (installedSkills.has("qa-debug-report")) {
@@ -444,6 +455,7 @@ function install(argv) {
   log(`Skills: ${toPosix(path.relative(projectRoot, targetDir))}`);
   const expectedScripts = [];
   if (args.skills.includes("qa-api")) expectedScripts.push("qa:reindex", "qa:reindex:check", "qa:report");
+  if (args.skills.includes("qa-api-fuzz")) expectedScripts.push("qa:fuzz", "qa:fuzz:profile", "qa:fuzz:lint", "qa:fuzz:replay");
   if (args.skills.includes("qa-debug-report")) expectedScripts.push("qa:debug", "qa:debug:open", "qa:debug:generate");
   if (expectedScripts.length) log(`Scripts esperados: ${expectedScripts.join(", ")}.`);
   log("Proximo passo: peca para a IA preparar o projeto para testes de API.");

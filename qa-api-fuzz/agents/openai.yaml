@@ -1,0 +1,4 @@
+interface:
+  display_name: "QA API Fuzz"
+  short_description: "Fuzzing de APIs por OpenAPI, Swagger ou profile descoberto."
+  default_prompt: "Prepare ou execute fuzzing de API com profile rastreavel."

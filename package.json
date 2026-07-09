@@ -1,7 +1,7 @@
 {
   "name": "@marcosquintino/qa-skills",
   "version": "0.1.0",
-  "description": "Instalador das skills QA API, QA Chamado, QA Debug Report e Graphify.",
+  "description": "Instalador das skills QA API, QA API Fuzz, QA Chamado, QA Debug Report e Graphify.",
   "type": "module",
   "workspaces": [
     "packages/faillens"
@@ -12,6 +12,7 @@
   "files": [
     "bin/",
     "qa-api/",
+    "qa-api-fuzz/",
     "qa-chamado/",
     "qa-debug-report/",
     "graphify/",
@@ -21,7 +22,7 @@
     "build:faillens": "npm run build --workspace packages/faillens",
     "sync:faillens": "node scripts/sync-faillens.mjs",
     "prepare:qa-debug-report": "npm run build:faillens && npm run sync:faillens",
-    "check": "node --check bin/qa-skills.mjs && node --check scripts/sync-faillens.mjs && node --check qa-debug-report/tools/qa-debug-report.mjs && node bin/qa-skills.mjs --help && node bin/qa-skills.mjs install --help"
+    "check": "node --check bin/qa-skills.mjs && node --check scripts/sync-faillens.mjs && node --check qa-api-fuzz/scripts/lib/common.mjs && node --check qa-api-fuzz/scripts/lib/profile-utils.mjs && node --check qa-api-fuzz/scripts/qa-fuzz-profile.mjs && node --check qa-api-fuzz/scripts/qa-fuzz-lint.mjs && node --check qa-api-fuzz/scripts/qa-fuzz.mjs && node --check qa-api-fuzz/scripts/qa-fuzz-replay.mjs && node --check qa-debug-report/tools/qa-debug-report.mjs && node bin/qa-skills.mjs --help && node bin/qa-skills.mjs install --help"
   },
   "publishConfig": {
     "access": "public"
