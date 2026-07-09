@@ -17,6 +17,7 @@ npm run qa:report -- --api <nome-da-api>
 npm run qa:report -- --dir cypress/e2e/apis/<nome-da-api>
 npm run qa:oracle -- --api <nome-da-api>
 npm run qa:oracle -- --api <nome-da-api> --faillens reports/faillens/faillens-report.json
+npm run qa:oracle -- --api <nome-da-api> --run-mutations --faillens reports/faillens/faillens-report.json
 ```
 
 ## qa-api-fuzz

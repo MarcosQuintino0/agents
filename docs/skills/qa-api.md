@@ -41,6 +41,7 @@ npm run qa:reindex:check
 npm run qa:report -- --api <nome-da-api>
 npm run qa:oracle -- --api <nome-da-api>
 npm run qa:oracle -- --api <nome-da-api> --faillens reports/faillens/faillens-report.json
+npm run qa:oracle -- --api <nome-da-api> --run-mutations --faillens reports/faillens/faillens-report.json
 ```
 
 ## Artefatos
@@ -52,6 +53,8 @@ npm run qa:oracle -- --api <nome-da-api> --faillens reports/faillens/faillens-re
 .agents/state/qa-api/reports/<api>/coverage.json
 .agents/state/qa-api/oracle/<api>/oracle.html
 .agents/state/qa-api/oracle/<api>/oracle.json
+.agents/state/qa-api/oracle/<api>/runner/oracle-mutants.cy.js
+.agents/state/qa-api/oracle/<api>/runner/oracle-mutants.results.json
 ```
 
 ## Prompts recomendados

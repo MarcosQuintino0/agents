@@ -4,7 +4,7 @@ import path from "node:path";
 import process from "node:process";
 import { execFile } from "node:child_process";
 
-const TOOL_VERSION = "0.1.0";
+const TOOL_VERSION = "0.2.0";
 const GENERATED_FIELDS = new Set([
   "id",
   "uuid",
@@ -22,6 +22,7 @@ Uso:
   npm run qa:oracle -- --api users
   npm run qa:oracle -- --dir cypress/e2e/apis/users
   npm run qa:oracle -- --api users --faillens reports/faillens/faillens-report.json
+  npm run qa:oracle -- --api users --run-mutations --faillens reports/faillens/faillens-report.json
   npm run qa:oracle -- --api users --open
 
 Opcoes:
@@ -30,6 +31,8 @@ Opcoes:
   --out <pasta>       Pasta de saida. Padrao: .agents/state/qa-api/oracle/<api>.
   --faillens <json>   Report FailLens opcional para evidencias reais.
   --coverage <json>   coverage.json opcional gerado pelo qa:report.
+  --run-mutations     Roda uma spec Cypress temporaria contra assertions mutadas em memoria.
+  --mutation-limit N  Limite de mutantes executaveis. Padrao: 80.
   --open              Abre oracle.html ao final, quando o sistema permitir.
   --help              Exibe esta ajuda.
 `.trim();
@@ -41,13 +44,22 @@ function fail(message) {
 }
 
 function parseArgs(argv) {
-  const args = { open: false };
+  const args = { open: false, runMutations: false, mutationLimit: 80 };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--help" || arg === "-h") {
       args.help = true;
     } else if (arg === "--open") {
       args.open = true;
+    } else if (arg === "--run-mutations") {
+      args.runMutations = true;
+    } else if (arg === "--mutation-limit") {
+      const value = Number.parseInt(argv[index + 1] || "", 10);
+      if (!Number.isInteger(value) || value <= 0) {
+        throw new Error("Informe um numero positivo para --mutation-limit.");
+      }
+      args.mutationLimit = value;
+      index += 1;
     } else if (arg === "--api" || arg === "--dir" || arg === "--out" || arg === "--faillens" || arg === "--coverage") {
       const value = argv[index + 1];
       if (!value || value.startsWith("--")) {
@@ -231,6 +243,131 @@ function extractTests(text, filePath, projectRoot) {
     pattern.lastIndex = closeIndex + 1;
   }
   return tests;
+}
+
+function resolveImportFile(specFile, importSource) {
+  if (!importSource.startsWith(".")) return null;
+  const base = path.resolve(path.dirname(specFile), importSource);
+  return path.extname(base) ? base : `${base}.js`;
+}
+
+function extractNamedImports(text, specFile, projectRoot) {
+  const imports = new Map();
+  const pattern = /import\s+{([^}]+)}\s+from\s+["'`]([^"'`]+)["'`]/g;
+  let match;
+  while ((match = pattern.exec(text))) {
+    const importFile = resolveImportFile(specFile, match[2]);
+    if (!importFile) continue;
+    for (const rawPart of match[1].split(",")) {
+      const part = rawPart.trim();
+      if (!part) continue;
+      const aliasMatch = /^([A-Za-z_$][\w$]*)\s+as\s+([A-Za-z_$][\w$]*)$/.exec(part);
+      const importedName = aliasMatch ? aliasMatch[1] : part;
+      const localName = aliasMatch ? aliasMatch[2] : part;
+      imports.set(localName, {
+        localName,
+        importedName,
+        importFile,
+        importPath: toPosix(path.relative(projectRoot, importFile)),
+        source: match[2],
+      });
+    }
+  }
+  return imports;
+}
+
+function findMatchingBrace(text, openIndex) {
+  let depth = 0;
+  for (let cursor = openIndex; cursor < text.length; cursor += 1) {
+    const char = text[cursor];
+    const next = text[cursor + 1];
+    if (char === "'" || char === '"' || char === "`") {
+      cursor = skipString(text, cursor, char) - 1;
+      continue;
+    }
+    if (char === "/" && next === "/") {
+      const end = text.indexOf("\n", cursor + 2);
+      cursor = end === -1 ? text.length : end;
+      continue;
+    }
+    if (char === "/" && next === "*") {
+      const end = text.indexOf("*/", cursor + 2);
+      cursor = end === -1 ? text.length : end + 1;
+      continue;
+    }
+    if (char === "{") depth += 1;
+    if (char === "}") {
+      depth -= 1;
+      if (depth === 0) return cursor;
+    }
+  }
+  return -1;
+}
+
+function extractObjectArgKeys(callArgs) {
+  const trimmed = callArgs.trim();
+  if (!trimmed.startsWith("{")) return { kind: "positional", keys: [] };
+  const openIndex = callArgs.indexOf("{");
+  const closeIndex = findMatchingBrace(callArgs, openIndex);
+  if (closeIndex === -1) return { kind: "unknown", keys: [] };
+  const objectText = callArgs.slice(openIndex + 1, closeIndex);
+  const keys = new Set();
+  for (const part of splitTopLevelComma(objectText)) {
+    const clean = part.trim();
+    if (!clean) continue;
+    const colonIndex = clean.indexOf(":");
+    const key = (colonIndex >= 0 ? clean.slice(0, colonIndex) : clean).trim();
+    if (/^[A-Za-z_$][\w$]*$/.test(key)) keys.add(key);
+  }
+
+  return { kind: "object", keys: [...keys] };
+}
+
+function splitTopLevelComma(text) {
+  const parts = [];
+  let start = 0;
+  let depth = 0;
+  for (let cursor = 0; cursor < text.length; cursor += 1) {
+    const char = text[cursor];
+    if (char === "'" || char === '"' || char === "`") {
+      cursor = skipString(text, cursor, char) - 1;
+      continue;
+    }
+    if (char === "{" || char === "[" || char === "(") depth += 1;
+    if (char === "}" || char === "]" || char === ")") depth -= 1;
+    if (char === "," && depth === 0) {
+      parts.push(text.slice(start, cursor));
+      start = cursor + 1;
+    }
+  }
+  parts.push(text.slice(start));
+  return parts;
+}
+
+function extractAssertCalls(callText, imports) {
+  const calls = [];
+  const pattern = /\b([A-Z][A-Za-z0-9_]*Assert)\.([A-Za-z_$][\w$]*)\s*\(/g;
+  let match;
+  while ((match = pattern.exec(callText))) {
+    const objectName = match[1];
+    const method = match[2];
+    const openIndex = callText.indexOf("(", match.index);
+    const closeIndex = findMatchingParen(callText, openIndex);
+    if (closeIndex === -1) continue;
+    const callArgs = callText.slice(openIndex + 1, closeIndex);
+    const importInfo = imports.get(objectName);
+    const argInfo = extractObjectArgKeys(callArgs);
+    calls.push({
+      objectName,
+      method,
+      argKind: argInfo.kind,
+      argKeys: argInfo.keys,
+      importInfo,
+      executable: Boolean(importInfo && argInfo.kind === "object" && argInfo.keys.length),
+    });
+    pattern.lastIndex = closeIndex + 1;
+  }
+  return calls;
 }
 
 function extractContractFields(text) {
@@ -692,6 +829,359 @@ function buildMutationEstimates({ test, assessment, observed, contractFields, sc
   return { estimates, killed: killed.length, survived: survived.length, notes };
 }
 
+function cloneJson(value) {
+  if (value === undefined) return undefined;
+  return JSON.parse(JSON.stringify(value));
+}
+
+function responseObjectFromRequest(request) {
+  return {
+    status: request?.receivedStatus,
+    body: cloneJson(request?.responseBody ?? null),
+    headers: cloneJson(request?.responseHeaders || {}),
+  };
+}
+
+function chooseVerificationRequest(observedTest, mainRequest) {
+  const requests = Array.isArray(observedTest?.requests) ? observedTest.requests : [];
+  const mainIndex = requests.indexOf(mainRequest);
+  const afterMain = mainIndex >= 0 ? requests.slice(mainIndex + 1) : requests;
+  return (
+    afterMain.find((request) => String(request.method || "").toUpperCase() === "GET" && request.responseBody) ||
+    requests.find((request) => String(request.method || "").toUpperCase() === "GET" && request.responseBody) ||
+    mainRequest
+  );
+}
+
+function getObjectId(...values) {
+  for (const value of values) {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      if (value.id !== undefined) return value.id;
+      if (value.uuid !== undefined) return value.uuid;
+      if (value.codigo !== undefined) return value.codigo;
+    }
+  }
+  return undefined;
+}
+
+function changedScalar(value) {
+  if (typeof value === "number") return Number.isFinite(value) ? value + 1 : 1;
+  if (typeof value === "string") return `${value}__qa_oracle_mutado`;
+  if (typeof value === "boolean") return !value;
+  if (value === null) return "__qa_oracle_mutado";
+  if (Array.isArray(value)) return [];
+  if (typeof value === "object") return "__qa_oracle_mutado";
+  return "__qa_oracle_mutado";
+}
+
+function changedType(value) {
+  if (typeof value === "number") return String(value);
+  if (typeof value === "string") return 123456789;
+  if (typeof value === "boolean") return String(value);
+  if (value === null) return { mutado: true };
+  if (Array.isArray(value)) return "array-mutado";
+  if (typeof value === "object") return "objeto-mutado";
+  return null;
+}
+
+function mutateBody(body, mutation) {
+  const next = cloneJson(body);
+  if (!next || typeof next !== "object" || Array.isArray(next)) return next;
+  if (mutation.mutation === "extra-field") {
+    next[mutation.field] = "qa-oracle-mutant";
+    return next;
+  }
+  if (!Object.prototype.hasOwnProperty.call(next, mutation.field)) return next;
+  if (mutation.mutation === "remove-field") {
+    delete next[mutation.field];
+    return next;
+  }
+  if (mutation.mutation === "type-change") {
+    next[mutation.field] = changedType(next[mutation.field]);
+    return next;
+  }
+  if (mutation.mutation === "value-change") {
+    next[mutation.field] = changedScalar(next[mutation.field]);
+    return next;
+  }
+  return next;
+}
+
+function mutateResponse(response, mutation) {
+  const next = cloneJson(response);
+  next.body = mutateBody(next.body, mutation);
+  return next;
+}
+
+function buildArgsForAssert(keys, originals, mutated, mutation) {
+  const requestBody = cloneJson(originals.mainRequest?.requestBody ?? {});
+  const originalBody = cloneJson(originals.verificationResponse.body || originals.mainResponse.body || {});
+  const id = getObjectId(originals.mainResponse.body, originals.verificationResponse.body, requestBody);
+  const args = {};
+  for (const key of keys) {
+    if (key === "resposta" || key === "response") {
+      args[key] = mutated.mainResponse;
+    } else if (key === "consulta") {
+      args[key] = mutated.verificationResponse;
+    } else if (key === "enviado" || key === "payload" || key === "esperado" || key === "valoresEsperados") {
+      args[key] = requestBody;
+    } else if (key === "original") {
+      args[key] = { ...requestBody, ...originalBody };
+    } else if (key === "preservado") {
+      args[key] = id === undefined ? {} : { id };
+    } else if (key === "id" || key === "idEsperado") {
+      args[key] = id;
+    } else if (key === "status" || /status/i.test(key)) {
+      args[key] = originals.mainResponse.status;
+    } else if (key === "campo" || key === "field") {
+      args[key] = mutation.field;
+    } else if (/mensagem|message/i.test(key)) {
+      args[key] = "";
+    } else {
+      args[key] = null;
+    }
+  }
+  return args;
+}
+
+function executableReason(test, observedTest) {
+  if (test.mode !== "active") return "teste pulado";
+  if (!observedTest) return "sem evidencia FailLens para o teste";
+  if (!test.assertCalls?.some((call) => call.executable)) return "sem chamada de assert nomeado executavel";
+  if (!chooseMainRequest(observedTest)) return "sem request capturada";
+  return "";
+}
+
+function buildExecutableMutationCases({ tests, failLensByTitle, mutationLimit }) {
+  const cases = [];
+  const skipped = [];
+  for (const test of tests) {
+    const observedTest = failLensByTitle.get(test.normalizedTitle);
+    const reason = executableReason(test, observedTest);
+    if (reason) {
+      skipped.push({ testId: test.id, title: test.title, reason });
+      continue;
+    }
+
+    const assertCall = test.assertCalls.find((call) => call.executable);
+    const mainRequest = chooseMainRequest(observedTest);
+    const verificationRequest = chooseVerificationRequest(observedTest, mainRequest);
+    const originals = {
+      mainRequest,
+      verificationRequest,
+      mainResponse: responseObjectFromRequest(mainRequest),
+      verificationResponse: responseObjectFromRequest(verificationRequest),
+    };
+
+    for (const mutation of test.mutationEstimates) {
+      if (cases.length >= mutationLimit) break;
+      const mutated = {
+        mainResponse: mutateResponse(originals.mainResponse, mutation),
+        verificationResponse: mutateResponse(originals.verificationResponse, mutation),
+      };
+      cases.push({
+        id: `${test.id}#${mutation.id}`.replace(/[^A-Za-z0-9_.:-]+/g, "_"),
+        sourceTestId: test.id,
+        sourceTitle: test.title,
+        sourceFile: test.file,
+        mutationId: mutation.id,
+        mutation,
+        assertion: {
+          objectName: assertCall.objectName,
+          importedName: assertCall.importInfo.importedName,
+          method: assertCall.method,
+          importPath: assertCall.importInfo.importPath,
+          registryKey: `${assertCall.importInfo.importPath}::${assertCall.importInfo.importedName}`,
+        },
+        args: buildArgsForAssert(assertCall.argKeys, originals, mutated, mutation),
+      });
+    }
+    if (cases.length >= mutationLimit) break;
+  }
+  return { cases, skipped };
+}
+
+function importPathFromRunner(runnerPath, importPath, projectRoot) {
+  const absoluteImport = path.resolve(projectRoot, importPath);
+  let relative = toPosix(path.relative(path.dirname(runnerPath), absoluteImport));
+  if (!relative.startsWith(".")) relative = `./${relative}`;
+  return relative;
+}
+
+function jsString(value) {
+  return JSON.stringify(value);
+}
+
+function renderMutationRunner({ cases, runnerPath, resultsPath, projectRoot }) {
+  const imports = [];
+  const registryEntries = [];
+  const importByKey = new Map();
+  for (const item of cases) {
+    const key = item.assertion.registryKey;
+    if (importByKey.has(key)) continue;
+    const alias = `QAOracleAssert${importByKey.size}`;
+    importByKey.set(key, alias);
+    const specifier = importPathFromRunner(runnerPath, item.assertion.importPath, projectRoot);
+    imports.push(`import { ${item.assertion.importedName} as ${alias} } from ${jsString(specifier)};`);
+    registryEntries.push(`${jsString(key)}: ${alias}`);
+  }
+  const casesWithRegistry = cases.map((item) => ({
+    ...item,
+    assertion: {
+      registryKey: item.assertion.registryKey,
+      objectName: item.assertion.objectName,
+      method: item.assertion.method,
+    },
+  }));
+  const resultsRelativePath = toPosix(path.relative(projectRoot, resultsPath));
+
+  return `${imports.join("\n")}
+
+const QA_ORACLE_CASES = ${JSON.stringify(casesWithRegistry, null, 2)};
+const QA_ORACLE_REGISTRY = {
+  ${registryEntries.join(",\n  ")}
+};
+const QA_ORACLE_RESULTS = ${jsString(resultsRelativePath)};
+
+function errorText(error) {
+  return String(error?.message || error || "").slice(0, 2000);
+}
+
+function callAssertion(testCase) {
+  const target = QA_ORACLE_REGISTRY[testCase.assertion.registryKey];
+  if (!target || typeof target[testCase.assertion.method] !== "function") {
+    throw new Error("Assert nao encontrado: " + testCase.assertion.objectName + "." + testCase.assertion.method);
+  }
+  return target[testCase.assertion.method](testCase.args);
+}
+
+describe("QA Oracle mutation runner", () => {
+  const results = [];
+
+  before(() => {
+    cy.writeFile(QA_ORACLE_RESULTS, []);
+  });
+
+  QA_ORACLE_CASES.forEach((testCase) => {
+    it(testCase.sourceTitle + " :: " + testCase.mutationId, () => {
+      const record = {
+        id: testCase.id,
+        sourceTestId: testCase.sourceTestId,
+        sourceTitle: testCase.sourceTitle,
+        mutationId: testCase.mutationId,
+        mutation: testCase.mutation,
+        assertion: testCase.assertion,
+        status: "survived",
+        error: ""
+      };
+
+      const failHandler = (error) => {
+        record.status = "killed";
+        record.error = errorText(error);
+        return false;
+      };
+
+      Cypress.once("fail", failHandler);
+
+      cy.then(() => callAssertion(testCase)).then(() => {
+        if (record.status === "survived" && Cypress.off) Cypress.off("fail", failHandler);
+        results.push(record);
+        cy.writeFile(QA_ORACLE_RESULTS, results);
+      });
+    });
+  });
+});
+`;
+}
+
+async function writeMutationRunner({ outDir, cases, projectRoot }) {
+  const runnerDir = path.join(outDir, "runner");
+  const runnerPath = path.join(runnerDir, "oracle-mutants.cy.js");
+  const casesPath = path.join(runnerDir, "oracle-mutants.cases.json");
+  const resultsPath = path.join(runnerDir, "oracle-mutants.results.json");
+  await fs.mkdir(runnerDir, { recursive: true });
+  await fs.writeFile(casesPath, `${JSON.stringify(cases, null, 2)}\n`, "utf8");
+  await fs.writeFile(resultsPath, "[]\n", "utf8");
+  await fs.writeFile(runnerPath, renderMutationRunner({ cases, runnerPath, resultsPath, projectRoot }), "utf8");
+  return { runnerDir, runnerPath, casesPath, resultsPath };
+}
+
+function cypressCommand() {
+  return process.platform === "win32" ? "npx.cmd" : "npx";
+}
+
+function runCommand(command, args, cwd) {
+  return new Promise((resolve) => {
+    execFile(command, args, { cwd, windowsHide: true, maxBuffer: 20 * 1024 * 1024 }, (error, stdout, stderr) => {
+      resolve({
+        status: typeof error?.code === "number" ? error.code : error ? 1 : 0,
+        error: error?.message || "",
+        stdout: String(stdout || ""),
+        stderr: String(stderr || ""),
+      });
+    });
+  });
+}
+
+async function runCypressMutationRunner({ runnerPath, projectRoot }) {
+  const result = await runCommand(
+    cypressCommand(),
+    [
+      "cypress",
+      "run",
+      "--spec",
+      runnerPath,
+      "--config",
+      "video=false,screenshotOnRunFailure=false",
+    ],
+    projectRoot,
+  );
+  return {
+    command: `${cypressCommand()} cypress run --spec ${toPosix(runnerPath)} --config video=false,screenshotOnRunFailure=false`,
+    exitCode: result.status,
+    stdout: result.stdout.slice(-12000),
+    stderr: result.stderr.slice(-12000),
+    error: result.error,
+  };
+}
+
+async function readMutationResults(resultsPath) {
+  const value = await readJsonIfExists(resultsPath);
+  return Array.isArray(value) ? value : [];
+}
+
+function applyMutationResults(tests, actualResults) {
+  const resultByKey = new Map(actualResults.map((item) => [`${item.sourceTestId}#${item.mutationId}`, item]));
+  return tests.map((test) => {
+    const mutationEstimates = test.mutationEstimates.map((mutation) => {
+      const actual = resultByKey.get(`${test.id}#${mutation.id}`);
+      return actual ? { ...mutation, actualStatus: actual.status, actualError: actual.error || "" } : mutation;
+    });
+    const actual = mutationEstimates.filter((item) => item.actualStatus);
+    return {
+      ...test,
+      mutationEstimates,
+      mutation: {
+        ...test.mutation,
+        actualTotal: actual.length,
+        actualKilled: actual.filter((item) => item.actualStatus === "killed").length,
+        actualSurvived: actual.filter((item) => item.actualStatus === "survived").length,
+      },
+    };
+  });
+}
+
+function summarizeActualMutations(tests) {
+  return tests.reduce(
+    (total, test) => ({
+      actualTotal: total.actualTotal + (test.mutation.actualTotal || 0),
+      actualKilled: total.actualKilled + (test.mutation.actualKilled || 0),
+      actualSurvived: total.actualSurvived + (test.mutation.actualSurvived || 0),
+    }),
+    { actualTotal: 0, actualKilled: 0, actualSurvived: 0 },
+  );
+}
+
 function severityRank(value) {
   return value === "high" ? 3 : value === "medium" ? 2 : 1;
 }
@@ -716,12 +1206,12 @@ function buildAiNextActions(tests, assertProfile) {
         evidence: `${test.file}:${test.line}`,
       });
     }
-    const survived = test.mutationEstimates.filter((item) => item.status === "estimated-survived");
+    const survived = test.mutationEstimates.filter((item) => item.actualStatus === "survived" || (!item.actualStatus && item.status === "estimated-survived"));
     if (survived.length) {
       actions.push({
         priority: survived.some((item) => item.mutation === "value-change") ? "high" : "medium",
-        type: "survived-mutants",
-        message: `${test.title}: ${survived.length} mutantes estimados sobreviveram.`,
+        type: survived.some((item) => item.actualStatus) ? "actual-survived-mutants" : "survived-mutants",
+        message: `${test.title}: ${survived.length} mutantes ${survived.some((item) => item.actualStatus) ? "executados" : "estimados"} sobreviveram.`,
         evidence: `${test.file}:${test.line}`,
       });
     }
@@ -738,14 +1228,20 @@ function renderHtml(report) {
   };
   const rows = report.tests
     .map((test) => {
-      const survived = test.mutationEstimates.filter((item) => item.status === "estimated-survived");
+      const actualExecuted = (test.mutation.actualTotal || 0) > 0;
+      const survived = test.mutationEstimates.filter((item) =>
+        actualExecuted ? item.actualStatus === "survived" : item.status === "estimated-survived",
+      );
+      const mutationCell = actualExecuted
+        ? `${test.mutation.actualKilled}/${test.mutation.actualTotal} real`
+        : `${test.mutation.killed}/${test.mutation.total} estimado`;
       return `<tr>
         <td><strong>${escapeHtml(test.title)}</strong><br><span>${escapeHtml(test.file)}:${test.line}</span></td>
         <td class="level ${test.level}">${levelLabels[test.level] || test.level}</td>
         <td>${test.score}</td>
         <td>${escapeHtml(test.presentLayers.join(", ") || "-")}</td>
         <td>${escapeHtml(test.missingLayers.join(", ") || "-")}</td>
-        <td>${test.mutation.killed}/${test.mutation.total}</td>
+        <td>${mutationCell}</td>
         <td>${escapeHtml(survived.slice(0, 5).map((item) => `${item.field}:${item.mutation}`).join(", ") || "-")}</td>
       </tr>`;
     })
@@ -754,6 +1250,14 @@ function renderHtml(report) {
     .slice(0, 12)
     .map((item) => `<li><strong>${escapeHtml(item.priority)}</strong> - ${escapeHtml(item.message)}</li>`)
     .join("\n");
+
+  const mutationMode = report.mutationRun?.executed ? "real" : "estimado";
+  const killedCount = report.mutationRun?.executed
+    ? report.summary.mutations.actualKilled
+    : report.summary.mutations.estimatedKilled;
+  const survivedCount = report.mutationRun?.executed
+    ? report.summary.mutations.actualSurvived
+    : report.summary.mutations.estimatedSurvived;
 
   return `<!doctype html>
 <html lang="pt-BR">
@@ -783,13 +1287,13 @@ function renderHtml(report) {
 <body>
 <main>
   <h1>QA Oracle - ${escapeHtml(report.api)}</h1>
-  <p class="muted">Auditoria estatica e mutation estimada das assertions. Nao executa requests nem altera dados.</p>
+  <p class="muted">Auditoria estatica e mutation ${mutationMode} das assertions. Nao executa requests nem altera dados.</p>
   <section class="cards">
     <div class="card">Testes<strong>${report.summary.tests}</strong></div>
     <div class="card">Score medio<strong>${report.summary.averageScore}</strong></div>
     <div class="card">Fortes<strong>${report.summary.levels.strong}</strong></div>
-    <div class="card">Mutantes mortos<strong>${report.summary.mutations.estimatedKilled}</strong></div>
-    <div class="card">Sobreviventes<strong>${report.summary.mutations.estimatedSurvived}</strong></div>
+    <div class="card">Mutantes mortos<strong>${killedCount}</strong></div>
+    <div class="card">Sobreviventes<strong>${survivedCount}</strong></div>
   </section>
   <table>
     <thead>
@@ -851,6 +1355,9 @@ async function main() {
       content: await fs.readFile(file, "utf8"),
     })),
   );
+  for (const spec of specs) {
+    spec.imports = extractNamedImports(spec.content, spec.file, projectRoot);
+  }
   const assertFiles = [];
   const supportAssertPath = path.join(sourceDir, "_support", "asserts.js");
   if (await pathExists(supportAssertPath)) {
@@ -871,8 +1378,13 @@ async function main() {
   const failLensTests = normalizeFailLensTests(failLensReport);
   const failLensByTitle = new Map(failLensTests.map((test) => [test.normalizedTitle, test]));
 
-  const tests = specs
-    .flatMap((spec) => extractTests(spec.content, spec.file, projectRoot))
+  let tests = specs
+    .flatMap((spec) =>
+      extractTests(spec.content, spec.file, projectRoot).map((test) => ({
+        ...test,
+        assertCalls: extractAssertCalls(test.source, spec.imports),
+      })),
+    )
     .map((test) => {
       const assessment = assessTest(test, assertProfile);
       const observed = observedEvidenceFor(test, failLensByTitle);
@@ -880,9 +1392,26 @@ async function main() {
       return {
         id: test.id,
         title: test.title,
+        normalizedTitle: test.normalizedTitle,
         file: test.file,
         line: test.line,
         mode: test.mode,
+        assertCalls: test.assertCalls.map((call) => ({
+          objectName: call.objectName,
+          method: call.method,
+          argKind: call.argKind,
+          argKeys: call.argKeys,
+          importInfo: call.importInfo
+            ? {
+                localName: call.importInfo.localName,
+                importedName: call.importInfo.importedName,
+                importPath: call.importInfo.importPath,
+                source: call.importInfo.source,
+              }
+            : null,
+          importPath: call.importInfo?.importPath || "",
+          executable: call.executable,
+        })),
         level: assessment.level,
         score: assessment.score,
         layers: assessment.layers,
@@ -904,6 +1433,50 @@ async function main() {
       };
     });
 
+  const executablePlan = buildExecutableMutationCases({
+    tests,
+    failLensByTitle,
+    mutationLimit: args.mutationLimit,
+  });
+  const runnerFiles = executablePlan.cases.length
+    ? await writeMutationRunner({ outDir, cases: executablePlan.cases, projectRoot })
+    : null;
+  let mutationRun = {
+    available: executablePlan.cases.length > 0,
+    executed: false,
+    attempted: false,
+    requested: args.runMutations,
+    cases: executablePlan.cases.length,
+    skipped: executablePlan.skipped,
+    runner: runnerFiles
+      ? {
+          spec: toPosix(path.relative(projectRoot, runnerFiles.runnerPath)),
+          cases: toPosix(path.relative(projectRoot, runnerFiles.casesPath)),
+          results: toPosix(path.relative(projectRoot, runnerFiles.resultsPath)),
+        }
+      : null,
+    result: null,
+  };
+
+  if (args.runMutations) {
+    if (!runnerFiles) {
+      mutationRun.result = { status: "not-run", reason: "nenhum mutante executavel foi gerado" };
+    } else {
+      const cypressResult = await runCypressMutationRunner({ runnerPath: runnerFiles.runnerPath, projectRoot });
+      const actualResults = await readMutationResults(runnerFiles.resultsPath);
+      tests = applyMutationResults(tests, actualResults);
+      mutationRun = {
+        ...mutationRun,
+        attempted: true,
+        executed: actualResults.length > 0,
+        result: {
+          ...cypressResult,
+          results: actualResults.length,
+        },
+      };
+    }
+  }
+
   const totalScore = tests.reduce((total, test) => total + test.score, 0);
   const levels = {
     strong: tests.filter((test) => test.level === "strong").length,
@@ -919,6 +1492,7 @@ async function main() {
     }),
     { total: 0, estimatedKilled: 0, estimatedSurvived: 0 },
   );
+  Object.assign(mutations, summarizeActualMutations(tests));
 
   const report = {
     schemaVersion: "1.0.0",
@@ -939,6 +1513,7 @@ async function main() {
       failLensMatchedTests: tests.filter((test) => test.observed.found).length,
       warnings: assertProfile.warnings.length + tests.reduce((total, test) => total + test.risks.length, 0),
     },
+    mutationRun,
     assertProfile,
     schemaSummary,
     tests,
@@ -953,9 +1528,13 @@ async function main() {
 
   console.log(`QA Oracle gerado: ${toPosix(path.relative(projectRoot, jsonPath))}`);
   console.log(`HTML: ${toPosix(path.relative(projectRoot, htmlPath))}`);
-  console.log(
-    `Resumo: ${tests.length} testes, score medio ${report.summary.averageScore}, ${mutations.estimatedSurvived} mutantes estimados sobreviventes.`,
-  );
+  const survivedLabel = mutationRun.executed
+    ? `${mutations.actualSurvived} mutantes executados sobreviventes`
+    : `${mutations.estimatedSurvived} mutantes estimados sobreviventes`;
+  console.log(`Resumo: ${tests.length} testes, score medio ${report.summary.averageScore}, ${survivedLabel}.`);
+  if (runnerFiles) {
+    console.log(`Runner: ${toPosix(path.relative(projectRoot, runnerFiles.runnerPath))}`);
+  }
 
   if (args.open) {
     await openFile(htmlPath);

@@ -66,6 +66,7 @@ Graphify é um mapa estrutural, não o contrato final.
 - Durante o preparo, pode instalar dependências de teste e criar a base comum autorizada.
 - Fora do preparo, não altere autenticação, schemas compartilhados, configurações sensíveis ou dependências sem autorização.
 - Use `qa:report` como relatório oficial estático das suítes geradas ou revisadas.
-- Use `qa:oracle` para auditar forca das assertions e mutantes estimados sem executar novas requests.
+- Use `qa:oracle` para auditar forca das assertions. Use `--run-mutations` somente com evidencia
+  FailLens quando quiser executar mutantes contra os asserts reais; ele nao deve fazer novas requests.
 - Use `qa-debug-report`/`qa:debug` apenas para investigar falhas reais de execução Cypress.
 - Não crie nem exija ferramentas legadas como `cy:log`, `relatorio-cobertura` ou `relatorio-execucao`.

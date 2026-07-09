@@ -31,6 +31,9 @@
 ```text
 .agents/state/qa-api/oracle/<api>/oracle.html
 .agents/state/qa-api/oracle/<api>/oracle.json
+.agents/state/qa-api/oracle/<api>/runner/oracle-mutants.cy.js
+.agents/state/qa-api/oracle/<api>/runner/oracle-mutants.cases.json
+.agents/state/qa-api/oracle/<api>/runner/oracle-mutants.results.json
 ```
 
 ## Fuzzing

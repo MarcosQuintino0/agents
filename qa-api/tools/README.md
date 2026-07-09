@@ -21,6 +21,7 @@ node .agents/skills/qa-api/tools/qa-report.mjs --dir cypress/e2e/apis/users
 node .agents/skills/qa-api/tools/qa-report.mjs --api users --open
 node .agents/skills/qa-api/tools/qa-oracle.mjs --api users
 node .agents/skills/qa-api/tools/qa-oracle.mjs --api users --faillens reports/faillens/faillens-report.json
+node .agents/skills/qa-api/tools/qa-oracle.mjs --api users --run-mutations --faillens reports/faillens/faillens-report.json
 ```
 
 ## Package.json recomendado
@@ -79,11 +80,19 @@ Para investigar falhas reais de execução Cypress, use a skill irmã `qa-debug-
 ```text
 .agents/state/qa-api/oracle/<api>/oracle.html
 .agents/state/qa-api/oracle/<api>/oracle.json
+.agents/state/qa-api/oracle/<api>/runner/oracle-mutants.cy.js
+.agents/state/qa-api/oracle/<api>/runner/oracle-mutants.cases.json
+.agents/state/qa-api/oracle/<api>/runner/oracle-mutants.results.json
 ```
 
-`qa:oracle` mede a forca das assertions da suite. Ele nao executa requests, nao cria dados e nao faz
-cleanup proprio. A versao inicial faz auditoria estatica e, quando `--faillens` existir, usa
-requests/responses capturados como evidencia para estimar mutantes sobreviventes.
+`qa:oracle` mede a forca das assertions da suite. Por padrao ele nao executa Cypress: faz auditoria
+estatica, usa requests/responses capturados quando `--faillens` existir e estima mutantes
+sobreviventes.
+
+Com `--run-mutations`, ele gera uma spec Cypress temporaria em `.agents/state` e chama os asserts
+reais com respostas mutadas em memoria. Essa spec nao faz `cy.request`, nao cria dados e nao tem
+cleanup proprio; a limpeza continua sendo responsabilidade da suite Cypress normal que gerou as
+evidencias.
 
 Use depois de `qa:report` e, quando houver execucao real, depois de `qa:debug`:
 
@@ -91,6 +100,7 @@ Use depois de `qa:report` e, quando houver execucao real, depois de `qa:debug`:
 npm run qa:report -- --api users
 npm run qa:oracle -- --api users
 npm run qa:oracle -- --api users --faillens reports/faillens/faillens-report.json
+npm run qa:oracle -- --api users --run-mutations --faillens reports/faillens/faillens-report.json
 ```
 
 Campos importantes do `coverage.json`:

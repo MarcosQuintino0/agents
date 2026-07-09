@@ -65,6 +65,7 @@ Depois que a IA criar ou revisar testes de uma API, ela pode gerar o relatorio o
 ```bash
 npm run qa:report -- --api <nome-da-api>
 npm run qa:oracle -- --api <nome-da-api>
+npm run qa:oracle -- --api <nome-da-api> --run-mutations --faillens reports/faillens/faillens-report.json
 ```
 
 Saidas padrao:
@@ -74,6 +75,8 @@ Saidas padrao:
 .agents/state/qa-api/reports/<api>/coverage.json
 .agents/state/qa-api/oracle/<api>/oracle.html
 .agents/state/qa-api/oracle/<api>/oracle.json
+.agents/state/qa-api/oracle/<api>/runner/oracle-mutants.cy.js
+.agents/state/qa-api/oracle/<api>/runner/oracle-mutants.results.json
 ```
 
 Para fuzzing investigativo de uma API:
@@ -107,8 +110,9 @@ reports/faillens/index.html
 reports/faillens/faillens-report.json
 ```
 
-`qa:report` e estatico e mede cobertura dos testes gerados. `qa:oracle` mede forca das assertions e
-estima mutantes sobreviventes sem executar novas requests. `qa:fuzz` e investigativo e explora
+`qa:report` e estatico e mede cobertura dos testes gerados. `qa:oracle` mede forca das assertions,
+estima mutantes sobreviventes e pode executar mutantes contra os asserts reais sem fazer novas
+requests. `qa:fuzz` e investigativo e explora
 robustez/contrato com profile rastreavel. `qa:debug` executa Cypress com instrumentacao temporaria
 para investigar falhas reais.
 
