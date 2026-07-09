@@ -41,6 +41,11 @@ Cada cenário deve validar o oráculo aplicável:
 
 Não aceite teste que valida só status, só chaves soltas, substring de mensagem, listagem paginada como prova de ausência, ou schema/persistência/não-vazamento em testes separados sem motivo.
 
+Quando o script existir, rode `qa:oracle` depois de `qa:report` para medir essa regra de forma
+automatica. O oracle estima mutantes em cima dos asserts e evidencias capturadas; ele nao deve
+reenviar `POST`, `PUT`, `PATCH` ou `DELETE` para testar mutation. A limpeza do ambiente continua
+sendo responsabilidade da suite Cypress normal.
+
 ## 3. Segurança e autorização
 
 Para endpoint protegido:

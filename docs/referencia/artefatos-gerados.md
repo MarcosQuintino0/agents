@@ -26,6 +26,13 @@
 .agents/state/qa-api/reports/<api>/coverage.json
 ```
 
+## QA Oracle
+
+```text
+.agents/state/qa-api/oracle/<api>/oracle.html
+.agents/state/qa-api/oracle/<api>/oracle.json
+```
+
 ## Fuzzing
 
 ```text

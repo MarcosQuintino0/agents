@@ -48,7 +48,7 @@ Esse comando:
 
 - copia as skills para `.agents/skills`;
 - instala ou valida `graphifyy==0.9.8`;
-- configura `qa:reindex`, `qa:reindex:check`, `qa:report`, `qa:fuzz`, `qa:fuzz:profile`,
+- configura `qa:reindex`, `qa:reindex:check`, `qa:report`, `qa:oracle`, `qa:fuzz`, `qa:fuzz:profile`,
   `qa:fuzz:lint`, `qa:fuzz:replay`, `qa:debug`, `qa:debug:open` e `qa:debug:generate` no
   `package.json`, quando ele existir;
 - adiciona o estado local das skills ao `.gitignore`.
@@ -64,6 +64,7 @@ Depois que a IA criar ou revisar testes de uma API, ela pode gerar o relatorio o
 
 ```bash
 npm run qa:report -- --api <nome-da-api>
+npm run qa:oracle -- --api <nome-da-api>
 ```
 
 Saidas padrao:
@@ -71,6 +72,8 @@ Saidas padrao:
 ```text
 .agents/state/qa-api/reports/<api>/coverage.html
 .agents/state/qa-api/reports/<api>/coverage.json
+.agents/state/qa-api/oracle/<api>/oracle.html
+.agents/state/qa-api/oracle/<api>/oracle.json
 ```
 
 Para fuzzing investigativo de uma API:
@@ -104,7 +107,8 @@ reports/faillens/index.html
 reports/faillens/faillens-report.json
 ```
 
-`qa:report` e estatico e mede cobertura dos testes gerados. `qa:fuzz` e investigativo e explora
+`qa:report` e estatico e mede cobertura dos testes gerados. `qa:oracle` mede forca das assertions e
+estima mutantes sobreviventes sem executar novas requests. `qa:fuzz` e investigativo e explora
 robustez/contrato com profile rastreavel. `qa:debug` executa Cypress com instrumentacao temporaria
 para investigar falhas reais.
 

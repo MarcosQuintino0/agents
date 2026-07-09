@@ -15,6 +15,8 @@ npm run qa:reindex
 npm run qa:reindex:check
 npm run qa:report -- --api <nome-da-api>
 npm run qa:report -- --dir cypress/e2e/apis/<nome-da-api>
+npm run qa:oracle -- --api <nome-da-api>
+npm run qa:oracle -- --api <nome-da-api> --faillens reports/faillens/faillens-report.json
 ```
 
 ## qa-api-fuzz

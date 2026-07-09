@@ -354,6 +354,7 @@ function configurePackageScripts(projectRoot, targetDir, backend, skills) {
   const installedSkills = new Set(skills);
   const reindexTool = path.relative(projectRoot, path.join(targetDir, "qa-api", "tools", "qa-reindex.mjs"));
   const reportTool = path.relative(projectRoot, path.join(targetDir, "qa-api", "tools", "qa-report.mjs"));
+  const oracleTool = path.relative(projectRoot, path.join(targetDir, "qa-api", "tools", "qa-oracle.mjs"));
   const fuzzTool = path.relative(projectRoot, path.join(targetDir, "qa-api-fuzz", "scripts", "qa-fuzz.mjs"));
   const fuzzProfileTool = path.relative(projectRoot, path.join(targetDir, "qa-api-fuzz", "scripts", "qa-fuzz-profile.mjs"));
   const fuzzLintTool = path.relative(projectRoot, path.join(targetDir, "qa-api-fuzz", "scripts", "qa-fuzz-lint.mjs"));
@@ -365,6 +366,7 @@ function configurePackageScripts(projectRoot, targetDir, backend, skills) {
     scripts["qa:reindex"] = scriptValue(reindexTool, `--backend "${toPosix(backend)}"`);
     scripts["qa:reindex:check"] = scriptValue(reindexTool, "--check");
     scripts["qa:report"] = scriptValue(reportTool);
+    scripts["qa:oracle"] = scriptValue(oracleTool);
   }
 
   if (installedSkills.has("qa-api-fuzz")) {
@@ -454,7 +456,7 @@ function install(argv) {
   log("Instalacao concluida.");
   log(`Skills: ${toPosix(path.relative(projectRoot, targetDir))}`);
   const expectedScripts = [];
-  if (args.skills.includes("qa-api")) expectedScripts.push("qa:reindex", "qa:reindex:check", "qa:report");
+  if (args.skills.includes("qa-api")) expectedScripts.push("qa:reindex", "qa:reindex:check", "qa:report", "qa:oracle");
   if (args.skills.includes("qa-api-fuzz")) expectedScripts.push("qa:fuzz", "qa:fuzz:profile", "qa:fuzz:lint", "qa:fuzz:replay");
   if (args.skills.includes("qa-debug-report")) expectedScripts.push("qa:debug", "qa:debug:open", "qa:debug:generate");
   if (expectedScripts.length) log(`Scripts esperados: ${expectedScripts.join(", ")}.`);

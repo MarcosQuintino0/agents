@@ -8,6 +8,7 @@ dependem de pacotes npm externos.
 ```text
 qa-api/tools/qa-reindex.mjs
 qa-api/tools/qa-report.mjs
+qa-api/tools/qa-oracle.mjs
 ```
 
 ## Uso direto
@@ -18,6 +19,8 @@ node .agents/skills/qa-api/tools/qa-reindex.mjs --check
 node .agents/skills/qa-api/tools/qa-report.mjs --api users
 node .agents/skills/qa-api/tools/qa-report.mjs --dir cypress/e2e/apis/users
 node .agents/skills/qa-api/tools/qa-report.mjs --api users --open
+node .agents/skills/qa-api/tools/qa-oracle.mjs --api users
+node .agents/skills/qa-api/tools/qa-oracle.mjs --api users --faillens reports/faillens/faillens-report.json
 ```
 
 ## Package.json recomendado
@@ -30,6 +33,7 @@ O instalador configura estes scripts quando encontra `package.json` no projeto c
     "qa:reindex": "node .agents/skills/qa-api/tools/qa-reindex.mjs --backend ../backend",
     "qa:reindex:check": "node .agents/skills/qa-api/tools/qa-reindex.mjs --check",
     "qa:report": "node .agents/skills/qa-api/tools/qa-report.mjs",
+    "qa:oracle": "node .agents/skills/qa-api/tools/qa-oracle.mjs",
     "qa:debug": "node .agents/skills/qa-debug-report/tools/qa-debug-report.mjs run",
     "qa:debug:open": "node .agents/skills/qa-debug-report/tools/qa-debug-report.mjs open",
     "qa:debug:generate": "node .agents/skills/qa-debug-report/tools/qa-debug-report.mjs generate"
@@ -69,6 +73,25 @@ testes gerados.
 
 Para investigar falhas reais de execução Cypress, use a skill irmã `qa-debug-report` e o script
 `qa:debug`. Esse fluxo gera `reports/faillens/index.html` e `reports/faillens/faillens-report.json`.
+
+## Saidas do oracle
+
+```text
+.agents/state/qa-api/oracle/<api>/oracle.html
+.agents/state/qa-api/oracle/<api>/oracle.json
+```
+
+`qa:oracle` mede a forca das assertions da suite. Ele nao executa requests, nao cria dados e nao faz
+cleanup proprio. A versao inicial faz auditoria estatica e, quando `--faillens` existir, usa
+requests/responses capturados como evidencia para estimar mutantes sobreviventes.
+
+Use depois de `qa:report` e, quando houver execucao real, depois de `qa:debug`:
+
+```bash
+npm run qa:report -- --api users
+npm run qa:oracle -- --api users
+npm run qa:oracle -- --api users --faillens reports/faillens/faillens-report.json
+```
 
 Campos importantes do `coverage.json`:
 

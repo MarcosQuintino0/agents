@@ -12,6 +12,7 @@ Criar testes de API fortes, rastreaveis e sustentados por contrato real do backe
 - Criar ou refatorar uma suite Cypress de API.
 - Revisar testes existentes.
 - Gerar `qa:report`.
+- Gerar `qa:oracle`.
 - Analisar reports de API e listar problemas numerados.
 
 ## Quando nao usar
@@ -30,6 +31,7 @@ Criar testes de API fortes, rastreaveis e sustentados por contrato real do backe
 5. Implementar somente cenarios com oraculo suficiente.
 6. Rodar lint, checks e suite quando possivel.
 7. Gerar `qa:report`.
+8. Gerar `qa:oracle`.
 
 ## Comandos
 
@@ -37,6 +39,8 @@ Criar testes de API fortes, rastreaveis e sustentados por contrato real do backe
 npm run qa:reindex
 npm run qa:reindex:check
 npm run qa:report -- --api <nome-da-api>
+npm run qa:oracle -- --api <nome-da-api>
+npm run qa:oracle -- --api <nome-da-api> --faillens reports/faillens/faillens-report.json
 ```
 
 ## Artefatos
@@ -46,6 +50,8 @@ npm run qa:report -- --api <nome-da-api>
 .agents/state/qa-api/backend-graph.lock.json
 .agents/state/qa-api/reports/<api>/coverage.html
 .agents/state/qa-api/reports/<api>/coverage.json
+.agents/state/qa-api/oracle/<api>/oracle.html
+.agents/state/qa-api/oracle/<api>/oracle.json
 ```
 
 ## Prompts recomendados
@@ -75,6 +81,7 @@ Revisar:
 Revise os testes da API <nome-da-api>.
 Use o checklist de qualidade da skill, compare com o backend real quando necessario,
 gere qa:report quando possivel e liste lacunas por severidade.
+Depois gere qa:oracle para medir a forca das assertions.
 ```
 
 ## Regras inegociaveis

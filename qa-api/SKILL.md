@@ -15,10 +15,10 @@ Use esta skill para trabalhar com testes de API Cypress em projetos consumidores
 2. **Criar ou refatorar testes**: use `agents/api-criador.md`.
    - Antes de implementar, valide Graphify e monte a matriz endpoint x cenário.
    - Use `pattern/08-checklist-qualidade.md` como gate de qualidade.
-   - Ao final, gere `qa:report` quando o ambiente permitir.
+   - Ao final, gere `qa:report` e `qa:oracle` quando o ambiente permitir.
 3. **Revisar testes existentes**: use `agents/api-revisor.md`.
    - Revise força das assertions, cobertura, segurança, persistência, cleanup, JSDoc e lacunas.
-   - Ao final, gere `qa:report` quando o ambiente permitir.
+   - Ao final, gere `qa:report` e `qa:oracle` quando o ambiente permitir.
 4. **Analisar execução/report**: use `agents/api-analisador.md`.
    - Aceite `cypress/logs/report.json` ou `reports/faillens/faillens-report.json` como evidência observada.
    - Entregue problemas numerados e evidências. Se o usuário pedir chamados, use `qa-chamado`.
@@ -66,5 +66,6 @@ Graphify é um mapa estrutural, não o contrato final.
 - Durante o preparo, pode instalar dependências de teste e criar a base comum autorizada.
 - Fora do preparo, não altere autenticação, schemas compartilhados, configurações sensíveis ou dependências sem autorização.
 - Use `qa:report` como relatório oficial estático das suítes geradas ou revisadas.
+- Use `qa:oracle` para auditar forca das assertions e mutantes estimados sem executar novas requests.
 - Use `qa-debug-report`/`qa:debug` apenas para investigar falhas reais de execução Cypress.
 - Não crie nem exija ferramentas legadas como `cy:log`, `relatorio-cobertura` ou `relatorio-execucao`.

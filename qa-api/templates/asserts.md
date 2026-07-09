@@ -37,6 +37,10 @@ export const validarErroNegocio = (response, status, mensagem) => {
 };
 
 export const BaseAssert = {
+  validarStatus,
+  validarSemConteudo,
+  validarErroValidacao,
+  validarErroNegocio,
   status: validarStatus,
   semConteudo: validarSemConteudo,
   erroValidacao: validarErroValidacao,
@@ -98,7 +102,7 @@ const validarSchemaCriacao = (resposta) => validarContra("recurso", resposta.bod
 const validarCamposPersistidos = ({ consulta, enviado, id }) =>
   validarContrato(consulta.body, enviado, id);
 
-export const validarCriacaoEPersistencia = ({ resposta, consulta, enviado }) => {
+export const validarCriacaoPersistida = ({ resposta, consulta, enviado }) => {
   validarStatusCriacao(resposta);
   validarSchemaCriacao(resposta);
   validarStatusCriacao(consulta);
@@ -106,7 +110,7 @@ export const validarCriacaoEPersistencia = ({ resposta, consulta, enviado }) => 
 };
 
 // `preservado` cobre campos que o backend mantem imutaveis no update (ex.: id e codigo originais).
-export const validarAtualizacaoEPersistencia = ({ resposta, consulta, enviado, preservado = {} }) => {
+export const validarAtualizacaoPersistida = ({ resposta, consulta, enviado, preservado = {} }) => {
   const esperado = { ...enviado, ...preservado };
   validarStatusCriacao(resposta);
   validarSchemaCriacao(resposta);
